@@ -18,7 +18,18 @@ tested-with:         GHC == 8.0.1
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Task1, Task2, Task3, Task4, Task5, Task6, Task7
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
+  default-language:    Haskell2010
+
+test-suite hw0-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  other-modules:       Task4Spec, Task5Spec
+  main-is:             Spec.hs
+  build-depends:       base
+                     , hw0
+                     , hspec
+  ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
