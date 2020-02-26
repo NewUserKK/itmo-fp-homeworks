@@ -1,23 +1,6 @@
-# fp-homework-templates
+# itmo-fp-homeworks
 
-[![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/pva701/fp-homework-templates/blob/master/LICENSE)
+[![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/NewUserKK/itmo-fp-homeworks/blob/master/LICENSE)
 
-Template Haskell homework project for [FP ITMO course](https://github.com/jagajaga/FP-course-ITMO).
-
-## This fork is intended to provide template for `stack new` command
-
-Execute
-
-`stack new fp-homework https://raw.githubusercontent.com/pva701/fp-homework-templates/master/fp-homework.hsfiles`
-
-That's it, you're all set!
-
-Before that, it's better to define several parameters in `~/.stack/config.yaml`:
-
-```yaml
-templates:
-  params:
-    author-name: Put your name here
-    author-email: your@email.com
-    github-username: your_github
-```
+Homeworks list:
+* [Homework 0](https://github.com/jagajaga/itmo-fp-2020/blob/master/hw0.md)
