@@ -8,7 +8,7 @@ module Task2
   , thirdNegElim
   ) where
 
-import Data.Void (Void)
+import Data.Void()
 
 type Neg a = a -> Int
 

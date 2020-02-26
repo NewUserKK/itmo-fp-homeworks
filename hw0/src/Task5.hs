@@ -10,7 +10,7 @@ module Task5
 type Nat a = (a -> a) -> a -> a
 
 zero :: Nat a
-zero f x = x
+zero _ x = x
 
 succChurch :: Nat a -> Nat a
 succChurch n f x = f (n f x)
