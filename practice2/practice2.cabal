@@ -22,3 +22,14 @@ executable practice2
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
   default-language:    Haskell2010
+
+test-suite practice2-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  other-modules:       MainSpec
+  main-is:             Spec.hs
+  build-depends:       base
+                     , practice2
+                     , hspec
+  ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
