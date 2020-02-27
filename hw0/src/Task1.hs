@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase, TypeOperators #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Task1
   ( distributivity

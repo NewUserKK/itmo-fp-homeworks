@@ -1,10 +1,10 @@
 module Task5
-  ( zero
+  ( Nat
+  , zero
   , succChurch
   , churchPlus
   , churchMult
   , churchToInt
-  , Nat
   ) where
 
 type Nat a = (a -> a) -> a -> a

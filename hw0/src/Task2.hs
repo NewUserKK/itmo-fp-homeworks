@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, TypeOperators #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Task2
   ( doubleNeg
