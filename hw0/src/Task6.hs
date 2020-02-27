@@ -1,7 +1,5 @@
 module Task6 where
 
-import Task1 (distributivity)
-
 foo :: Char -> Maybe Double
 foo char =
   case char == 'o' of
@@ -22,11 +20,10 @@ mapMaybe f (x:xs) =
       Just r -> r : rs
 
 distributivityWhnf :: (Either String b, Either String c)
-distributivityWhnf = (a, b)
-  where
-    dist = distributivity (Left ("harold" ++ " hide " ++ "the " ++ "pain"))
-    a = fst dist
-    b = snd dist
+distributivityWhnf = 
+  ( Left ("harold" ++ " hide " ++ "the " ++ "pain")
+  , Left ("harold" ++ " hide " ++ "the " ++ "pain")
+  )
 
 poleChudesWhnf :: Bool
 poleChudesWhnf = False
