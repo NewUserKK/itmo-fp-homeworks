@@ -35,6 +35,7 @@ tags
 # IntellijIDEA
 .idea/
 .ideaHaskellLib/
+out/
 *.iml
 
 # Atom
@@ -51,3 +52,6 @@ TAGS
 # other
 .DS_Store
 *.lock
+
+# practice
+practice4

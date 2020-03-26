@@ -18,7 +18,38 @@ tested-with:         GHC == 8.0.1
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     Block1.Task1
+                     , Block1.Task2
+                     , Block1.Task3
+                     , Block2.Task1
+                     , Block2.Task2
+                     , Block3.Task1
+                     , Block3.Task2
+                     , Block4.Task1
+                     , Block4.Task2
+                     , Block4.Task3
+                     , Block5.Task1
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
+  default-language:    Haskell2010
+
+
+test-suite hw1-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  other-modules:       Block1.Task1Spec
+                     , Block1.Task2Spec
+                     , Block1.Task3Spec
+                     , Block2.Task1Spec
+                     , Block2.Task2Spec
+                     , Block3.Task1Spec
+                     , Block3.Task2Spec
+                     , Block4.Task1Spec
+                     , Block5.Task1Spec
+  main-is:             Spec.hs
+  build-depends:       base
+                     , hw1
+                     , hspec
+                     , QuickCheck
+  ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
