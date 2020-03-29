@@ -34,32 +34,32 @@ data Tree a
 -- Binary search tree is the tree that satisfy following rule:
 -- for every node: all values of a left child of a node is less than node value,
 -- and all values of a right child is greater than node value.
---  
+--
 -- [t] is type of tree and [a] is type of elements of that tree
 -- so implementors are supposed to look like (t a).
 class Ord a => BinarySearchTree a t | t -> a where
   -- | Check if tree is empty
   isEmpty :: t -> Bool
-  
-  -- | Return number of nodes in the tree. 
+
+  -- | Return number of nodes in the tree.
   -- (Note: not the total number of elements in this nodes)
   size :: t -> Int
-  
+
   -- | Check if element is present in the tree.
   -- Returns a list of all elements associated with the found node if any,
   -- and Nothing otherwise.
   find :: a -> t -> Maybe (NonEmpty a)
-  
+
   -- | Insert element in the tree preserving class invariant.
   insert :: a -> t -> t
-  
+
   -- | Remove element from the tree preserving class invariant.
   remove :: a -> t -> t
-  
+
   -- | Construct tree from a list.
   fromList :: [a] -> t
 
--- | Instance of BST for a Tree. 
+-- | Instance of BST for a Tree.
 -- Tree is not balanced in any way.
 instance Ord a => BinarySearchTree a (Tree a) where
   isEmpty :: Tree a -> Bool
