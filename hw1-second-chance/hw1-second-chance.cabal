@@ -20,6 +20,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Block6.Task1
                      , Block6.Task2
+                     , Block6.Task3
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
   default-language:    Haskell2010

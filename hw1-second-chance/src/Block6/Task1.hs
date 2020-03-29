@@ -12,28 +12,28 @@ data Parser s a =
 
 instance Functor (Parser s) where
   fmap :: (a -> b) -> Parser s a -> Parser s b
-  fmap transform (Parser run) =
+  fmap transform parser =
     Parser $ \stream -> do
-      res <- run stream
-      return $ Bifunctor.first transform res
+      match <- runParser parser stream
+      return $ Bifunctor.first transform match
 
 instance Applicative (Parser s) where
   pure :: a -> Parser s a
   pure a = Parser $ \x -> Just (a, x)
 
   (<*>) :: Parser s (a -> b) -> Parser s a -> Parser s b
-  (<*>) (Parser runFunction) (Parser runValue) =
+  (<*>) functionParser valueParser =
     Parser $ \stream -> do
-      (transform, rest) <- runFunction stream
-      valueRes <- runValue $ rest
-      return $ Bifunctor.first transform valueRes
+      (transform, rest) <- runParser functionParser stream
+      match <- runParser valueParser rest
+      return $ Bifunctor.first transform match
 
 instance Monad (Parser s) where
   (>>=) :: Parser s a -> (a -> Parser s b) -> Parser s b
-  (>>=) (Parser run) bind =
+  (>>=) parser bind =
     Parser $ \stream -> do
-      (res, rest) <- run stream
-      runParser (bind res) rest
+      (match, rest) <- runParser parser stream
+      runParser (bind match) rest
 
 instance Alternative (Parser s) where
    empty :: Parser s a

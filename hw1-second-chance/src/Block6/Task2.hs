@@ -2,15 +2,16 @@
 
 module Block6.Task2 where
 
+import Data.Monoid ((<>))
 import Block6.Task1
 
-ok :: Parser s ()
-ok = Parser $ \s -> Just ((), s)
+ok :: Parser s [a]
+ok = Parser $ \s -> Just ([], s)
 
-eof :: Parser s ()
+eof :: Parser s [a]
 eof =
   Parser $ \case
-    [] -> Just ((), [])
+    [] -> Just ([], [])
     _ -> Nothing
 
 satisfy :: (s -> Bool) -> Parser s s
@@ -20,10 +21,7 @@ satisfy predicate =
     _ -> Nothing
 
 element :: Eq s => s -> Parser s s
-element c =
-  Parser $ \case
-    (x : xs) | x == c -> Just (c, xs)
-    _ -> Nothing
+element c = satisfy (== c)
 
 stream :: Eq s => [s] -> Parser s [s]
 stream cs =
@@ -32,3 +30,30 @@ stream cs =
       where
         (prefix, suffix) = splitAt (length cs) xs
     _ -> Nothing
+
+
+-- Other combinators for future tasks 
+
+(+++) :: Monoid a => Parser s a -> Parser s a -> Parser s a
+(+++) first second =
+  Parser $ \s -> do
+    (match, rest) <- runParser first s
+    (sndMatch, sndRest) <- runParser second rest
+    return (match <> sndMatch, sndRest)
+    
+notParser :: Monoid a => Parser s a -> Parser s a
+notParser parser = 
+  Parser $ \s -> 
+    case runParser parser s of
+       Nothing -> Just (mempty, s)
+       _ -> Nothing
+       
+some :: Monoid a => Parser s a -> Parser s a
+some parser = 
+  Parser $ \s -> do
+    (firstMatch, firstRest) <- runParser parser s
+    (match, rest) <- 
+      case runParser (some parser) firstRest of
+        Nothing -> Just (mempty, firstRest)
+        x -> x
+    return (firstMatch <> match, rest)
