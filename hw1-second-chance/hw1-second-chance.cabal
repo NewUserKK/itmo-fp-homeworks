@@ -19,6 +19,7 @@ tested-with:         GHC == 8.0.1
 library
   hs-source-dirs:      src
   exposed-modules:     Block6.Task1
+                     , Block6.Task2
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
   default-language:    Haskell2010
@@ -27,7 +28,7 @@ library
 test-suite hw1-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  other-modules:       Block6.Task1Spec
+--  other-modules:       Block6.Task1Spec
   main-is:             Spec.hs
   build-depends:       base
                      , hw1-second-chance
