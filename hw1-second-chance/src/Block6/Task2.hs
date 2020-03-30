@@ -34,13 +34,6 @@ stream cs =
 
 -- Other combinators for future tasks 
 
-(+++) :: Semigroup a => Parser s a -> Parser s a -> Parser s a
-(+++) first second =
-  Parser $ \s -> do
-    (match, rest) <- runParser first s
-    (sndMatch, sndRest) <- runParser second rest
-    return (match <> sndMatch, sndRest)
-
 eps :: Parser s [a]
 eps = Parser $ \s -> Just ([], s)
 
@@ -50,36 +43,21 @@ eol =
     [] -> Just ([], [])
     _ -> Nothing 
 
---notParser :: Monoid a => Parser s a -> Parser s a
---notParser parser = 
---  Parser $ \s -> 
---    case runParser parser s of
---       Nothing -> Just (mempty, s)
---       _ -> Nothing
+(+++) :: Semigroup a => Parser s a -> Parser s a -> Parser s a
+(+++) first second =
+  Parser $ \s -> do
+    (match, rest) <- runParser first s
+    (sndMatch, sndRest) <- runParser second rest
+    return (match <> sndMatch, sndRest)
 
---some :: Monoid a => Parser s a -> Parser s a
---some parser =
---  Parser $ \s -> do
---    (firstMatch, firstRest) <- runParser parser s
---    (match, rest) <-
---      case runParser (some parser) firstRest of
---        Nothing -> Just (mempty, firstRest)
---        x -> x
---    return (firstMatch <> match, rest)
---
---many :: Monoid a => Parser s a -> Parser s a
---many parser =
---  Parser $ \s ->
---    case runParser parser s of
---      Nothing -> Just (mempty, s)
---      Just (firstMatch, firstRest) -> do
---        (match, rest) <-
---          case runParser (many parser) firstRest of
---            Nothing -> Just (mempty, firstRest)
---            x -> x
---        return (firstMatch <> match, rest)
+(+:+) :: Parser s a -> Parser s [a] -> Parser s [a]
+(+:+) first second =
+  Parser $ \s -> do
+    (match, rest) <- runParser first s
+    (sndMatch, sndRest) <- runParser second rest
+    return (match : sndMatch, sndRest)
 
-matchExactly :: Int -> Parser s [a] -> Parser s [a]
-matchExactly 0 _ = eps
-matchExactly n parser =
-  Parser $ \s -> runParser (parser +++ matchExactly (n - 1) parser) s
+matchExactly :: Int -> Parser s a -> Parser s [a]
+matchExactly n parser
+  | n > 0 = parser +:+ matchExactly (n - 1) parser
+  | otherwise = eps

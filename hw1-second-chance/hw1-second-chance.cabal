@@ -21,6 +21,7 @@ library
   exposed-modules:     Block6.Task1
                      , Block6.Task2
                      , Block6.Task3
+                     , Block6.Task4
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
   default-language:    Haskell2010
@@ -31,6 +32,7 @@ test-suite hw1-test
   hs-source-dirs:      test
   other-modules:       Block6.Task2Spec
                      , Block6.Task3Spec
+                     , Block6.Task4Spec
   main-is:             Spec.hs
   build-depends:       base
                      , hw1-second-chance

@@ -14,9 +14,9 @@ correctBracketSequence :: Parser Char String
 correctBracketSequence = eol <|> (correctBracketSequence' +++ eol)
 
 correctBracketSequence' :: Parser Char String
-correctBracketSequence' = rule1 +++ (eol <|> correctBracketSequence' <|> eps)
+correctBracketSequence' = rule +++ (eol <|> correctBracketSequence' <|> eps)
   where
-    rule1 = lBracket +++ (correctBracketSequence' <|> eps) +++ rBracket
+    rule = lBracket +++ (correctBracketSequence' <|> eps) +++ rBracket
 
 lBracket :: Parser Char String
 lBracket = stream "("
