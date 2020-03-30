@@ -29,7 +29,8 @@ library
 test-suite hw1-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
---  other-modules:       Block6.Task1Spec
+  other-modules:       Block6.Task2Spec
+                     , Block6.Task3Spec
   main-is:             Spec.hs
   build-depends:       base
                      , hw1-second-chance

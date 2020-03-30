@@ -19,7 +19,7 @@ instance Functor (Parser s) where
 
 instance Applicative (Parser s) where
   pure :: a -> Parser s a
-  pure a = Parser $ \x -> Just (a, x)
+  pure a = Parser $ \s -> Just (a, s)
 
   (<*>) :: Parser s (a -> b) -> Parser s a -> Parser s b
   (<*>) functionParser valueParser =
@@ -40,5 +40,6 @@ instance Alternative (Parser s) where
    empty = Parser $ const Nothing
    
    (<|>) :: Parser s a -> Parser s a -> Parser s a
-   (<|>) (Parser runFirst) (Parser runSecond) = 
-     Parser $ \stream -> runFirst stream <|> runSecond stream
+   (<|>) first second = 
+     Parser $ \stream -> runParser first stream <|> runParser second stream
+     
