@@ -35,27 +35,16 @@ stream cs =
 -- Other combinators for future tasks 
 
 eps :: Parser s [a]
-eps = Parser $ \s -> Just ([], s)
+eps = [] <$ ok
 
 eol :: Parser s [a]
-eol = 
-  Parser $ \case
-    [] -> Just ([], [])
-    _ -> Nothing 
+eol = [] <$ eof
 
 (+++) :: Semigroup a => Parser s a -> Parser s a -> Parser s a
-(+++) first second =
-  Parser $ \s -> do
-    (match, rest) <- runParser first s
-    (sndMatch, sndRest) <- runParser second rest
-    return (match <> sndMatch, sndRest)
+(+++) first second = (<>) <$> first <*> second
 
 (+:+) :: Parser s a -> Parser s [a] -> Parser s [a]
-(+:+) first second =
-  Parser $ \s -> do
-    (match, rest) <- runParser first s
-    (sndMatch, sndRest) <- runParser second rest
-    return (match : sndMatch, sndRest)
+(+:+) first second = (:) <$> first <*> second
 
 matchExactly :: Int -> Parser s a -> Parser s [a]
 matchExactly n parser

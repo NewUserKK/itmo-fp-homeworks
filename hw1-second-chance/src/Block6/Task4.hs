@@ -8,15 +8,21 @@ import Block6.Task1
 import Block6.Task2
 
 listListParser :: Parser Char [[Int]]
-listListParser = ([[]] <$ eol) <|> (listParser +:+ many (comma *> listParser))
+listListParser = ([] <$ eol) <|> (listParser +:+ many (comma *> listParser) <* eol)
 
 listParser :: Parser Char [Int]
 listParser =
   Parser $ \s -> do
-    (parseListSize, rest) <- runParser (numberParser <* comma) s
-    (a, b) <- runParser (matchExactly (read parseListSize - 1) (numberParser <* comma)) rest
-    (c, d) <- runParser numberParser b
-    return (map read $ a ++ [c], d)
+    (listSize, listRest) <- runParser numberParser s
+    if read listSize == (0 :: Int)
+      then return ([], listRest)
+      else let listStartParser = (comma *> matchExactly (read listSize - 1) numberWithComma)
+            in do (listStart, tailRest) <- runParser listStartParser listRest
+                  (listTail, rest) <- runParser numberParser tailRest
+                  return (map read $ listStart ++ [listTail], rest)
+
+numberWithComma :: Parser Char String
+numberWithComma = numberParser <* comma
 
 numberParser :: Parser Char String
 numberParser = spaces *> (plusOrMinus +++ some digit) <* spaces
