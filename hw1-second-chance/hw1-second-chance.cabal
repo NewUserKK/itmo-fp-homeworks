@@ -30,7 +30,8 @@ library
 test-suite hw1-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  other-modules:       Block6.Task2Spec
+  other-modules:       Block6.Task1Spec
+                     , Block6.Task2Spec
                      , Block6.Task3Spec
                      , Block6.Task4Spec
   main-is:             Spec.hs
