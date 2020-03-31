@@ -7,8 +7,11 @@ import Data.Char
 import Block6.Task1
 import Block6.Task2
 
+-- | Parser of list of list of numbers separated by comma ignoring spaces.
+-- String format: (<number of elements in list>, <exactly n elements>)*
+-- Negative list length isn't allowed.
 listListParser :: Parser Char [[Int]]
-listListParser = ([] <$ eol) <|> (listParser +:+ many (comma *> listParser) <* eol)
+listListParser = ([] <$ (spaces *> eol)) <|> (listParser +:+ many (comma *> listParser) <* eol)
 
 listParser :: Parser Char [Int]
 listParser =

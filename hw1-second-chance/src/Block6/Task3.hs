@@ -10,6 +10,11 @@ import Block6.Task2
 import Control.Applicative
 import Data.Char
 
+-- | Parse correct bracket sequence.
+-- Correct bracket sequence is a string that satisfies following grammar:
+--   S -> (S)
+--   S -> S S
+--   S -> eps
 correctBracketSequence :: Parser Char String
 correctBracketSequence = eol <|> (correctBracketSequence' +++ eol)
 
@@ -24,8 +29,9 @@ lBracket = stream "("
 rBracket :: Parser Char String
 rBracket = stream ")"
 
--- number parser
 
+-- | Parse number.
+-- Number can be parsed from a string that satisfies following regexp: (+-)?(\d)+
 numberParser :: Parser Char Int
 numberParser = read <$> (plusOrMinus +++ some digit +++ eol)
 

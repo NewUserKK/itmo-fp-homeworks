@@ -47,12 +47,7 @@ spec = do
       runParser (stream [1 :: Int, 2, 3]) [2, 3, 1] `shouldBe` Nothing
       
   -- tests for additional combinators
-  
-  describe "Block6.Task2.(+++)" $ do
-    it "should return result of sequential application of two parsers" $ do
-      let expected = Just ("covid-2019", " sucks") in
-       let actual = runParser (stream "covid" +++ stream "-2019") "covid-2019 sucks" in
-       expected `shouldBe` actual
+
        
   describe "Block6.Task2.eps" $ do
     it "always succeeds" $ do
@@ -67,3 +62,13 @@ spec = do
            case s of
              "" ->  Just ("", "")
              _ -> Nothing
+  
+  describe "Block6.Task2.(+++)" $ do
+    it "sequentially applies parsers with mconcat of result" $ do
+      let expected = Just ("covid-2019", " sucks") in
+       let actual = runParser (stream "covid" +++ stream "-2019") "covid-2019 sucks" in
+       expected `shouldBe` actual
+       
+  describe "Block6.Task2.(+:+)" $ do
+    it "sequentially applies parsers with collecting to list" $ do
+      runParser (element '1' +:+ stream "11") "111" `shouldBe` Just ("111", "")

@@ -18,8 +18,12 @@ spec = do
       parseListList "0" `shouldBe` Just ([[]], "")
     it "empty input is empty list" $ do
       parseListList "" `shouldBe` Just ([], "")
+    it "blank input is empty list" $ do
+      parseListList "     " `shouldBe` Just ([], "")
+    it "fails on incorrect list size"$ do
+      parseListList "1,2,3,4,5" `shouldBe` Nothing
     it "fails on negative list size" $ do
-      parseListList "1, 2, -1, 1, 2" `shouldBe` Nothing
+      parseListList "1,2,-1,1,2" `shouldBe` Nothing
     it "ignores spaces" $ do
       parseListList "  2    ,1, +10,    3, 5,       -7,    2    " `shouldBe`
         Just ([[1, 10], [5, -7, 2]], "")
