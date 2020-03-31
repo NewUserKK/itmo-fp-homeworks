@@ -72,3 +72,7 @@ spec = do
   describe "Block6.Task2.(+:+)" $ do
     it "sequentially applies parsers with collecting to list" $ do
       runParser (element '1' +:+ stream "11") "111" `shouldBe` Just ("111", "")
+  
+  describe "Block6.Task2.matchExactly" $ do
+    it "matches exactly n elements of stream" $ do
+      runParser (matchExactly 3 (satisfy isDigit)) "3124asd" `shouldBe` Just ("312", "4asd")
