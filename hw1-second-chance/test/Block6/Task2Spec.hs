@@ -46,8 +46,8 @@ spec = do
     it "fails when not starts with provided stream" $ do
       runParser (stream [1 :: Int, 2, 3]) [2, 3, 1] `shouldBe` Nothing
       
+      
   -- tests for additional combinators
-
        
   describe "Block6.Task2.eps" $ do
     it "always succeeds" $ do
