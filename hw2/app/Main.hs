@@ -2,14 +2,15 @@
 
 module Main where
 
-import Options.Applicative
+import Control.Monad.Catch
+import Control.Monad.State
 import Data.List.NonEmpty as NE
 import Filesystem
+import FilesystemCommands
 import FilesystemLoader
+import Options.Applicative
+import System.IO (hFlush, stdout)
 import Utils
-import Control.Monad.State
-import Control.Monad.Catch
-import System.IO (stdout, hFlush)
 
 data Arguments =
   Arguments

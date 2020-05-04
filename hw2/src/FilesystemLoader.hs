@@ -2,13 +2,13 @@
 
 module FilesystemLoader where
 
-import System.Directory
-import Filesystem
-import Data.Maybe (fromJust, catMaybes)
-import Control.Monad.Trans.Maybe
+import Control.Applicative ((<|>))
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
-import Control.Applicative ((<|>))
+import Control.Monad.Trans.Maybe
+import Data.Maybe (catMaybes, fromJust)
+import Filesystem
+import System.Directory
 
 loadFilesystem :: String -> IO FSState
 loadFilesystem rootPath = do
@@ -35,7 +35,7 @@ constructDirectory parentPath path = do
   isDirectory <- liftIO $ doesDirectoryExist path
   guard isDirectory
   contents <- liftIO $ getFolderContents parentPath path
-  return Directory 
+  return Directory
     { filePath = stringToPath (parentPath </> path)
     , fileAccessibility = ""
     , directoryContents = contents
