@@ -40,7 +40,7 @@ mkdir = undefined
 --      directoryContents = directoryContents root ++ [constructDirectoryRelative root x]
 --    }
 
-fileContents :: StringPath -> FileSystem BS.ByteString
-fileContents path = do
+readFileContents :: StringPath -> FileSystem BS.ByteString
+readFileContents path = do
   file <- getDocumentByPath path
-  undefined
+  return $ documentContent file

@@ -5,7 +5,7 @@ module Filesystem where
 
 import Control.Exception
 import Control.Monad.State
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BS
 import Data.List (find, intercalate)
 import Data.List.NonEmpty as NE
 import Utils

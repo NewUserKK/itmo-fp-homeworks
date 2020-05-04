@@ -4,6 +4,7 @@ module Main where
 
 import Control.Monad.Catch
 import Control.Monad.State
+import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE
 import Filesystem
 import FilesystemCommands
@@ -21,6 +22,7 @@ data Command
   = ChangeDirectory String
   | ListFiles String
   | MakeDirectory String
+  | ReadFile String
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -62,6 +64,7 @@ parseCommand s =
     "cd" :| [path] -> Right $ ChangeDirectory path
     "ls" :| [path] -> Right $ ListFiles path
     "mkdir" :| [path] -> Right $ MakeDirectory path
+    "cat" :| [path] -> Right $ ReadFile path
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -70,6 +73,7 @@ execCommand e =
     ChangeDirectory path -> execCD path
     ListFiles path -> execLs path
     MakeDirectory path -> execMkdir path
+    ReadFile path -> execReadFile path
 
 execCD :: String -> FileSystem ()
 execCD path = do
@@ -77,19 +81,21 @@ execCD path = do
   newState <- get
   liftIO $ print $ filePath . currentDirectory $ newState
 
-printCommandExecutionError :: CommandExecutionError -> FileSystem ()
-printCommandExecutionError e = liftIO $ print e
-
 execLs :: String -> FileSystem ()
 execLs path = do
   contents <- listContents path
   liftIO $ print contents
 
 execMkdir :: String -> FileSystem ()
-execMkdir path = do
-  makeDirectory path
-  newState <- get
-  liftIO $ print $ directoryContents . rootDirectory $ newState
+execMkdir path = makeDirectory path
+
+execReadFile :: String -> FileSystem ()
+execReadFile path = do
+  contents <- readFileContents path
+  liftIO $ BS.putStrLn contents
+
+printCommandExecutionError :: CommandExecutionError -> FileSystem ()
+printCommandExecutionError e = liftIO $ print e
 
 printError :: UnknownCommandError -> FileSystem ()
 printError err = liftIO $ putStrLn $ "Wrong command: " ++ show err
