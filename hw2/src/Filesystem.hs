@@ -9,28 +9,28 @@ import qualified Data.ByteString.Lazy as BS
 import Data.List (find, intercalate)
 import Data.List.NonEmpty as NE
 import Utils
+import Data.Time (UTCTime)
+import System.Directory
 
 type Path = NonEmpty String
 
 type StringPath = String
-
-type AccessibilityRights = String
 
 type FileSystem a = StateT FSState IO a
 
 data File
   = Directory
       { filePath :: Path
-      , fileAccessibility :: AccessibilityRights
+      , filePermissions :: Permissions
       , directoryContents :: [File]
       , directoryParent :: Maybe Path
       }
   | Document
       { filePath :: Path
-      , fileAccessibility :: AccessibilityRights
+      , filePermissions :: Permissions
       , documentExtension :: String
-      , documentCreationTime :: String
-      , documentUpdateTime :: String
+      , documentCreationTime :: UTCTime
+      , documentUpdateTime :: UTCTime
       , documentSize :: Int
       , documentContent :: BS.ByteString
       }
@@ -111,11 +111,14 @@ stringToPath s = splitOn '/' s
 pathToString :: Path -> StringPath
 pathToString = intercalate "/" . NE.toList
 
+extensionFromPath :: Path -> String
+extensionFromPath = NE.last . splitOn '.' . NE.last
+
 constructDirectoryRelative :: Path -> String -> File
 constructDirectoryRelative parent name =
   Directory
     { filePath = parent <:| name
-    , fileAccessibility = ""
+    , filePermissions = emptyPermissions
     , directoryContents = []
     , directoryParent = Just parent
     }
@@ -124,7 +127,7 @@ constructDirectoryByPath :: String -> File
 constructDirectoryByPath path  =
   Directory
     { filePath = stringToPath path
-    , fileAccessibility = ""
+    , filePermissions = emptyPermissions
     , directoryContents = []
     , directoryParent = Nothing
     }

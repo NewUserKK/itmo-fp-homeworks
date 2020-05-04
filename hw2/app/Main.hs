@@ -19,10 +19,11 @@ data Arguments =
     }
 
 data Command
-  = ChangeDirectory String
-  | ListFiles String
-  | MakeDirectory String
-  | ReadFile String
+  = ChangeDirectory StringPath
+  | ListFiles StringPath
+  | MakeDirectory StringPath
+  | ReadFile StringPath
+  | PrintInfo StringPath
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -65,6 +66,7 @@ parseCommand s =
     "ls" :| [path] -> Right $ ListFiles path
     "mkdir" :| [path] -> Right $ MakeDirectory path
     "cat" :| [path] -> Right $ ReadFile path
+    "info" :| [path] -> Right $ PrintInfo path
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -74,25 +76,29 @@ execCommand e =
     ListFiles path -> execLs path
     MakeDirectory path -> execMkdir path
     ReadFile path -> execReadFile path
+    PrintInfo path -> execPrintInfo path
 
-execCD :: String -> FileSystem ()
+execCD :: StringPath -> FileSystem ()
 execCD path = do
   changeDirectory path
   newState <- get
   liftIO $ print $ filePath . currentDirectory $ newState
 
-execLs :: String -> FileSystem ()
+execLs :: StringPath -> FileSystem ()
 execLs path = do
   contents <- listContents path
   liftIO $ print contents
 
-execMkdir :: String -> FileSystem ()
+execMkdir :: StringPath -> FileSystem ()
 execMkdir path = makeDirectory path
 
-execReadFile :: String -> FileSystem ()
+execReadFile :: StringPath -> FileSystem ()
 execReadFile path = do
   contents <- readFileContents path
   liftIO $ BS.putStrLn contents
+  
+execPrintInfo :: StringPath -> FileSystem ()
+execPrintInfo path = getFileInfo path >>= liftIO . putStrLn
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

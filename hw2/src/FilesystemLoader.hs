@@ -42,19 +42,20 @@ constructDirectory parentPath path = do
   let realPath = parentPath </> path
   let localPath = stringToPath $ if path == "" then "/" else path
   isDirectory <- liftIO $ doesDirectoryExist realPath
-  
+
   guard isDirectory
-  
-  contents <- liftIO $ getFolderContents realPath
+
   let updateFunction = \file ->
        case file of
           d@Directory{} -> d { directoryParent = Just localPath }
           Document{} -> file
-          
+  contents <- liftIO $ (map updateFunction) <$> getFolderContents realPath
+  permissions <- liftIO $ getPermissions path
+
   return Directory
     { filePath = localPath
-    , fileAccessibility = ""
-    , directoryContents = map updateFunction contents
+    , filePermissions = permissions
+    , directoryContents = contents
     , directoryParent = Nothing
     }
 
@@ -63,15 +64,22 @@ constructDocument :: FilePath -> MaybeT IO (File)
 constructDocument path = do
   isFile <- liftIO $ doesFileExist path
   guard isFile
+
+  let filepath = stringToPath path
+  let extension = extensionFromPath filepath
+  permissions <- liftIO $ getPermissions path
+--  creationTime <- liftIO $ getCreationTime path
+  modificationTime <- liftIO $ getModificationTime path
+  fileSize <- liftIO $ fromIntegral <$> getFileSize path
   contents <- liftIO $ BS.readFile path
-  
+
   return Document
-    { filePath = stringToPath path
-    , fileAccessibility = ""
-    , documentExtension = "ext"
-    , documentCreationTime = ""
-    , documentUpdateTime = ""
-    , documentSize = 42
+    { filePath = filepath
+    , filePermissions = permissions
+    , documentExtension = extension
+    , documentCreationTime = modificationTime
+    , documentUpdateTime = modificationTime
+    , documentSize = fileSize
     , documentContent = contents
     }
 
