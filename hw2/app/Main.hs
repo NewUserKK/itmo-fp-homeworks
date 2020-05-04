@@ -47,7 +47,7 @@ loop = do
   liftIO $ hFlush stdout
   line <- liftIO $ getLine
   case parseCommand line of
-    Right cmd -> execCommand cmd
+    Right cmd -> execCommand cmd `catch` printCommandExecutionError
     Left err -> printError err
   loop
 
@@ -64,13 +64,11 @@ parseCommand s =
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
-execCommand e = do
-  let t = 
-        case e of
-          ChangeDirectory path -> execCD path
-          ListFiles path -> execLs path
-          MakeDirectory path -> execMkdir path
-  t `catch` printCommandExecutionError
+execCommand e =
+  case e of
+    ChangeDirectory path -> execCD path
+    ListFiles path -> execLs path
+    MakeDirectory path -> execMkdir path
 
 execCD :: String -> FileSystem ()
 execCD path = do
