@@ -51,16 +51,17 @@ changeDirectory :: String -> FileSystem ()
 changeDirectory path = do
   st <- get
   evalled <- liftIO $ evalStateT (getDirectoryByPath path) st
-  case evalled of
-    Left e -> throwM e
-    Right newDirectory -> do
-      liftIO $ print . directoryParent $ newDirectory
-      modify (\s -> s {currentDirectory = newDirectory})
+  modify (\s -> s {currentDirectory = evalled})
+--  case evalled of
+--    Left e -> throwM e
+--    Right newDirectory -> do
+--      liftIO $ print . directoryParent $ newDirectory
+--      modify (\s -> s {currentDirectory = newDirectory})
 
-listContents :: String -> FileSystem (Either CommandExecutionError [String])
+listContents :: String -> FileSystem [String]
 listContents path = do
   dir <- getDirectoryByPath path
-  return $ dir >>= return . (Prelude.map nameByPath) . directoryContents
+  return $ (Prelude.map nameByPath) $ directoryContents dir
 
 makeDirectory :: String -> FileSystem ()
 makeDirectory path = do
@@ -85,7 +86,7 @@ mkdir (x :| []) root =
       directoryContents = directoryContents root ++ [constructDirectoryRelative root x]
     })
 
-getDirectoryByPath :: String -> FileSystem (Either CommandExecutionError File)
+getDirectoryByPath :: String -> FileSystem File
 getDirectoryByPath path = do
   currentDir <- gets currentDirectory
   rootDir <- gets rootDirectory
@@ -95,18 +96,18 @@ getDirectoryByPath path = do
          _ -> currentDir
   return $ getDirectoryByRelativePath (stringToPath path) dir
 
-getDirectoryByRelativePath :: Path -> File -> Either CommandExecutionError File
-getDirectoryByRelativePath ("/" :| []) root = Right root
+getDirectoryByRelativePath :: Path -> File -> File
+getDirectoryByRelativePath ("/" :| []) root =  root
 getDirectoryByRelativePath ("/" :| path) root = getDirectoryByRelativePath (fromList path) root
 getDirectoryByRelativePath (x :| []) root = moveNext root x
-getDirectoryByRelativePath (x :| next:xs) root = moveNext root x >>= getDirectoryByRelativePath (next :| xs)
+getDirectoryByRelativePath (x :| next:xs) root = getDirectoryByRelativePath (next :| xs) (moveNext root x)
 
-moveNext :: File -> String -> Either CommandExecutionError File
+moveNext :: File -> String -> File
 moveNext root name =
   case findInFolder root name of
-    Just dir@(Directory {}) -> Right dir
-    Just (Document {}) -> Left DirectoryIsDocument
-    Nothing -> Left NoSuchDirectory
+    Just dir@(Directory {}) -> dir
+    Just (Document {}) -> throw DirectoryIsDocument
+    Nothing -> throw NoSuchDirectory
 
 findInFolder :: File -> String -> Maybe File
 findInFolder root name =
@@ -117,7 +118,6 @@ findInFolder root name =
         Just p -> Just p
         Nothing -> Just root
     _ -> find ((== name) . nameByPath) (directoryContents root)
-
 
 nameByPath :: File -> String
 nameByPath = NE.last . filePath
