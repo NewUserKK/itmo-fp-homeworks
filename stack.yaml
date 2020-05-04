@@ -11,6 +11,12 @@ packages:
 extra-deps:
 - HsYAML-0.2.1.0@sha256:e4677daeba57f7a1e9a709a1f3022fe937336c91513e893166bd1f023f530d68,5311
 - HsYAML-aeson-0.2.0.0@sha256:04796abfc01cffded83f37a10e6edba4f0c0a15d45bef44fc5bb4313d9c87757,1791
+- directory-1.3.6.1
+- mtl-2.2.2
+- transformers-0.5.6.2
+- exceptions-0.10.0
+- optparse-applicative-0.15.1.0
+- process-1.6.8.2@sha256:c2c95560dab7cea7f77b190166c3916945155f0daf5928b28c20a0ac34d4ea2a,2468
 
 flags: {}
 
