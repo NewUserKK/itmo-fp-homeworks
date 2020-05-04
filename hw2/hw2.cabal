@@ -25,6 +25,7 @@ library
                      , exceptions
                      , directory
                      , transformers
+                     , bytestring
   default-language:    Haskell2010
 
 executable hw2
@@ -36,4 +37,5 @@ executable hw2
                      , optparse-applicative
                      , mtl
                      , exceptions
+                     , bytestring
   default-language:    Haskell2010

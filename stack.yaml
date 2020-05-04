@@ -17,6 +17,7 @@ extra-deps:
 - exceptions-0.10.0
 - optparse-applicative-0.15.1.0
 - process-1.6.8.2@sha256:c2c95560dab7cea7f77b190166c3916945155f0daf5928b28c20a0ac34d4ea2a,2468
+- bytestring-0.10.8.2
 
 flags: {}
 

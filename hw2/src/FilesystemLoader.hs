@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module FilesystemLoader where
 
@@ -12,17 +13,18 @@ import System.Directory
 
 loadFilesystem :: String -> IO FSState
 loadFilesystem rootPath = do
-  fsRoot <- getCurrentDirectory
-  root <- fromJust <$> (runMaybeT $ constructDirectory fsRoot rootPath)
-  let rootWithParents = updateParents root
+  fsRoot <- makeAbsolute rootPath
+  print $ fsRoot
+  root <- fromJust <$> (runMaybeT $ constructDirectory fsRoot "")
   return FSState
-    { currentDirectory = rootWithParents
-    , rootDirectory = rootWithParents
+    { currentDirectory = root
+    , rootDirectory = root
+    , realRootPath = fsRoot
     }
 
-getFolderContents :: FilePath -> FilePath -> IO [File]
-getFolderContents parentPath path = do
-  withCurrentDirectory (parentPath </> path) $ do
+getFolderContents :: FilePath -> IO [File]
+getFolderContents path = do
+  withCurrentDirectory path $ do
     currentDir <- getCurrentDirectory
     paths <- listDirectory currentDir
     catMaybes <$> traverse (runMaybeT . fileFromPath currentDir) paths
@@ -32,13 +34,22 @@ fileFromPath parentPath path = (constructDocument path) <|> (constructDirectory 
 
 constructDirectory :: FilePath -> FilePath -> MaybeT IO (File)
 constructDirectory parentPath path = do
-  isDirectory <- liftIO $ doesDirectoryExist path
+  let realPath = parentPath </> path
+  let localPath = stringToPath $ if path == "" then "/" else path
+  isDirectory <- liftIO $ doesDirectoryExist realPath
   guard isDirectory
-  contents <- liftIO $ getFolderContents parentPath path
+  contents <- liftIO $ getFolderContents realPath
+  let updateFunction = \file ->
+       case file of
+          d@Directory{} -> d { directoryParent = Just localPath }
+          Document{} -> file
+  liftIO $ print $ "===========" 
+  liftIO $ print $ realPath 
+  liftIO $ print $ map (directoryParent . updateFunction) $ filter (\case Directory{} -> True; _ -> False) contents
   return Directory
-    { filePath = stringToPath (parentPath </> path)
+    { filePath = localPath
     , fileAccessibility = ""
-    , directoryContents = contents
+    , directoryContents = map updateFunction contents
     , directoryParent = Nothing
     }
 
@@ -53,21 +64,12 @@ constructDocument path = do
     , documentCreationTime = ""
     , documentUpdateTime = ""
     , documentSize = 42
+    , documentContent = "content"
     }
 
-updateParents :: File -> File
-updateParents root@(Directory{}) = do
-  let updateFun =
-        \case
-            d@Directory{} -> d { directoryParent = Just root }
-            file -> file
-  let contents = map updateFun $ directoryContents root
-  let updRoot = root { directoryContents = contents }
-  let contentsWithParent = map updateParents (directoryContents updRoot)
-  updRoot { directoryContents = contentsWithParent }
-updateParents doc = doc
-
 concatPath :: FilePath -> FilePath -> FilePath
+concatPath "" path = path
+concatPath parentPath "" = parentPath
 concatPath parentPath path = parentPath ++ "/" ++ path
 
 (</>) ::  FilePath -> FilePath -> FilePath
