@@ -34,7 +34,8 @@ getFolderContents path = do
 
 
 fileFromPath :: FilePath -> FilePath -> MaybeT IO (File)
-fileFromPath parentPath path = (constructDocument path) <|> (constructDirectory parentPath path)
+fileFromPath parentPath path = 
+  (constructDocument parentPath path) <|> (constructDirectory parentPath path)
 
 
 constructDirectory :: FilePath -> FilePath -> MaybeT IO (File)
@@ -60,12 +61,13 @@ constructDirectory parentPath path = do
     }
 
 
-constructDocument :: FilePath -> MaybeT IO (File)
-constructDocument path = do
+constructDocument :: FilePath -> FilePath -> MaybeT IO (File)
+constructDocument parentPath path = do
+  let realPath = parentPath </> path
   isFile <- liftIO $ doesFileExist path
   guard isFile
 
-  let filepath = stringToPath path
+  let filepath = stringToPath realPath
   let extension = extensionFromPath filepath
   permissions <- liftIO $ getPermissions path
 --  creationTime <- liftIO $ getCreationTime path

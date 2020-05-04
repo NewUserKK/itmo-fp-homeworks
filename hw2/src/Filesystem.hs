@@ -106,6 +106,7 @@ nameByPath = NE.last . filePath
 
 stringToPath :: StringPath -> Path
 stringToPath "/" = "/":|[]
+stringToPath ('/':cs) = "/" :| NE.drop 1 (splitOn '/' cs)
 stringToPath s = splitOn '/' s
 
 pathToString :: Path -> StringPath

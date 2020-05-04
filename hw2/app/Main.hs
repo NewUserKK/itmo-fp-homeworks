@@ -24,6 +24,7 @@ data Command
   | MakeDirectory StringPath
   | ReadFile StringPath
   | PrintInfo StringPath
+  | Find StringPath String
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -67,6 +68,7 @@ parseCommand s =
     "mkdir" :| [path] -> Right $ MakeDirectory path
     "cat" :| [path] -> Right $ ReadFile path
     "info" :| [path] -> Right $ PrintInfo path
+    "find" :| path : [name] -> Right $ Find path name
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -77,6 +79,7 @@ execCommand e =
     MakeDirectory path -> execMkdir path
     ReadFile path -> execReadFile path
     PrintInfo path -> execPrintInfo path
+    Find path name -> execFind path name
 
 execCD :: StringPath -> FileSystem ()
 execCD path = do
@@ -99,6 +102,11 @@ execReadFile path = do
   
 execPrintInfo :: StringPath -> FileSystem ()
 execPrintInfo path = getFileInfo path >>= liftIO . putStrLn
+
+execFind :: StringPath -> String -> FileSystem ()
+execFind path name = do
+  result <- findByName path name
+  liftIO $ print result
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module FilesystemCommands where
 
@@ -86,3 +87,23 @@ constructDocumentInfo path permissions extension creationTime modificationTime s
 getFileSize :: File -> Int64
 getFileSize dir@Directory{} = foldr ((+) . getFileSize) 0 (directoryContents dir)
 getFileSize doc@Document{} = BS.length $ documentContent doc
+
+
+findByName :: StringPath -> String -> FileSystem [String]
+findByName root name = do
+  file <- getFileByPath root
+  liftIO $ print file
+  st <- get
+  let foldFunc =
+        \dir acc -> do
+          a <- acc
+          maybeFound <- evalStateT (findInFolder dir name) st
+          case maybeFound of
+            Just f -> return $ a ++ [f]
+            Nothing -> return a
+    
+  t <- liftIO $ foldr foldFunc (pure []) (filterDirectories $ directoryContents file)
+  return $ Prelude.map (pathToString . filePath) t
+  
+filterDirectories :: [File] -> [File]
+filterDirectories = Prelude.filter (\case Directory{} -> True; _ -> False)
