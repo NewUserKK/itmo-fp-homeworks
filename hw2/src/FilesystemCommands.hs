@@ -11,8 +11,9 @@ import Path
 import File
 import Control.Exception (throw)
 import GHC.Int (Int64)
-import System.Directory (Permissions)
+import System.Directory (Permissions, emptyPermissions)
 import Data.Time (UTCTime)
+import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 
 changeDirectory :: StringPath -> FileSystem ()
 changeDirectory path = do
@@ -27,24 +28,27 @@ getContents path = do
 
 makeDirectory :: StringPath -> FileSystem ()
 makeDirectory path = do
-  root <- gets rootDirectory
-  modify (\s -> s { rootDirectory = mkdir (stringToPath path) root })
+  let directory = Directory {
+     filePath = stringToPath path
+    , filePermissions = emptyPermissions
+    , directoryContents = []
+    , fileParent = Just $ getParentPath $ stringToPath path
+    }
+  createFile path directory
 
-mkdir :: Path -> File -> File
-mkdir = undefined
---mkdir path@(x :| next : xs) root =
---  case findInFolder root x of
---    Just dir@(Directory {}) -> mkdir (next :| xs) dir
---    Just (Document {}) -> throw DirectoryExpected
---    Nothing -> mkdir path (root {
---      directoryContents = directoryContents root ++ [constructDirectoryRelative root x]
---    })
---mkdir (x :| []) root =
---  case findInFolder root x of
---    Just _ -> throw FileAlreadyExists
---    Nothing -> root {
---      directoryContents = directoryContents root ++ [constructDirectoryRelative root x]
---    }
+makeFile :: StringPath -> BS.ByteString -> FileSystem ()
+makeFile path text = do
+  modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
+  let file = Document {
+      filePath = stringToPath path
+    , filePermissions = emptyPermissions
+    , fileParent = Nothing
+    , documentCreationTime = modificationTime
+    , documentUpdateTime = modificationTime
+    , documentSize = BS.length text
+    , documentContent = text
+    }
+  createFile path file
 
 readFileContents :: StringPath -> FileSystem BS.ByteString
 readFileContents path = do
@@ -57,7 +61,7 @@ getFileInfo path = do
   case file of
     dir@Directory{} -> do
       let filepath = pathToString $ filePath dir
-      let parentPath = show $ pathToString <$> directoryParent dir
+      let parentPath = show $ pathToString <$> fileParent dir
       let permissions = filePermissions dir
       let fileCount = Prelude.length $ directoryContents dir
       let size = getFileSize dir
@@ -65,7 +69,7 @@ getFileInfo path = do
     doc@Document{} -> do
       let filepath = pathToString $ filePath doc
       let permissions = filePermissions doc
-      let extension = documentExtension doc
+      let extension = extensionFromPath $ filePath doc
       let creationTime = documentCreationTime doc
       let modificationTime = documentUpdateTime doc
       let size = getFileSize doc

@@ -55,10 +55,7 @@ constructDirectory realFsRoot localParentPath name = do
   isDirectory <- liftIO $ doesDirectoryExist realPath
   guard isDirectory
 
-  let updateFunction = \file ->
-       case file of
-          dir@Directory{} -> dir { directoryParent = Just $ stringToPath localPath }
-          Document{} -> file
+  let updateFunction = \file -> file { fileParent = Just $ stringToPath localPath }
   contents <- liftIO $ (map updateFunction) <$> getFolderContents realFsRoot realPath localPath
   permissions <- liftIO $ getPermissions realPath
 
@@ -66,7 +63,7 @@ constructDirectory realFsRoot localParentPath name = do
     { filePath = stringToPath localPath
     , filePermissions = permissions
     , directoryContents = contents
-    , directoryParent = Nothing
+    , fileParent = Nothing
     }
 
 
@@ -77,7 +74,6 @@ constructDocument parentPath path = do
   guard isFile
 
   let filepath = stringToPath realPath
-  let extension = extensionFromPath filepath
   permissions <- liftIO $ getPermissions path
 --  creationTime <- liftIO $ getCreationTime path
   modificationTime <- liftIO $ getModificationTime path
@@ -87,7 +83,7 @@ constructDocument parentPath path = do
   return Document
     { filePath = filepath
     , filePermissions = permissions
-    , documentExtension = extension
+    , fileParent = Nothing
     , documentCreationTime = modificationTime
     , documentUpdateTime = modificationTime
     , documentSize = fileSize

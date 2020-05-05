@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
@@ -24,6 +25,7 @@ data Command
   = ChangeDirectory StringPath
   | ListFiles StringPath
   | MakeDirectory StringPath
+  | MakeDocument StringPath BS.ByteString
   | ReadFile StringPath
   | PrintInfo StringPath
   | Find StringPath String
@@ -68,6 +70,8 @@ parseCommand s =
     "cd" :| [path] -> Right $ ChangeDirectory path
     "ls" :| [path] -> Right $ ListFiles path
     "mkdir" :| [path] -> Right $ MakeDirectory path
+    "touch" :| path : [text] -> Right $ MakeDocument path $ BS.pack text
+    "touch" :| [path] -> Right $ MakeDocument path ""
     "cat" :| [path] -> Right $ ReadFile path
     "info" :| [path] -> Right $ PrintInfo path
     "find" :| path : [name] -> Right $ Find path name
@@ -79,6 +83,7 @@ execCommand e =
     ChangeDirectory path -> execCD path
     ListFiles path -> execLs path
     MakeDirectory path -> execMkdir path
+    MakeDocument path text -> execTouch path text
     ReadFile path -> execReadFile path
     PrintInfo path -> execPrintInfo path
     Find path name -> execFind path name
@@ -96,6 +101,9 @@ execLs path = do
 
 execMkdir :: StringPath -> FileSystem ()
 execMkdir path = makeDirectory path
+
+execTouch :: StringPath -> BS.ByteString -> FileSystem ()
+execTouch path text = makeFile path text
 
 execReadFile :: StringPath -> FileSystem ()
 execReadFile path = do

@@ -23,3 +23,7 @@ pathToString path = intercalate "/" . NE.toList $ path
 
 extensionFromPath :: Path -> String
 extensionFromPath = NE.last . splitOn '.' . NE.last
+
+getParentPath :: Path -> Path
+getParentPath root@("/" :| []) = root
+getParentPath list = NE.fromList $ NE.init list
