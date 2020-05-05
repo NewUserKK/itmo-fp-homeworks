@@ -94,17 +94,7 @@ getFileSize doc@Document{} = BS.length $ documentContent doc
 
 
 findByName :: StringPath -> String -> FileSystem [String]
-findByName root name = do
-  file <- getFileByPath root
-  st <- get
-  let foldFunc =
-        \dir acc -> do
-          a <- acc
-          maybeFound <- evalStateT (findInFolder dir name) st
-          case maybeFound of
-            Just f -> return $ a ++ [f]
-            Nothing -> return a
-    
-  t <- liftIO $ foldr foldFunc (pure []) (filterDirectories $ directoryContents file)
-  return $ Prelude.map (pathToString . filePath) t
+findByName rootPath name = do
+  root <- getDirectoryByPath rootPath
+  return $ Prelude.map (pathToString . filePath) (findInPathByName root name)
   

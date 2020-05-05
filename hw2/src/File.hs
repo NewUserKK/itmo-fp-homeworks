@@ -2,10 +2,12 @@
 
 module File where
 
-import Data.ByteString.Lazy as BS
+import Data.List
+import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Path
-import System.Directory (Permissions)
+import System.Directory (Permissions, emptyPermissions)
+import Utils ((<:|))
 
 data File
   = Directory
@@ -32,3 +34,24 @@ filterDirectories = Prelude.filter (\case Directory{} -> True; _ -> False)
 
 fileName :: File -> String
 fileName = nameByPath . filePath
+
+findInFolder :: File -> String -> Maybe File
+findInFolder folder name = find ((name ==) . fileName) (directoryContents folder)
+
+constructDirectoryRelative :: Path -> String -> File
+constructDirectoryRelative parent name =
+  Directory
+    { filePath = parent <:| name
+    , filePermissions = emptyPermissions
+    , directoryContents = []
+    , directoryParent = Just parent
+    }
+
+constructDirectoryByPath :: String -> File
+constructDirectoryByPath path  =
+  Directory
+    { filePath = stringToPath path
+    , filePermissions = emptyPermissions
+    , directoryContents = []
+    , directoryParent = Nothing
+    }
