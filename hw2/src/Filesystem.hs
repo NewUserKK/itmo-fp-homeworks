@@ -54,19 +54,22 @@ data CommandExecutionError
 
 
 getFileByPath :: StringPath -> FileSystem File
-getFileByPath path = do
-  currentDir <- gets currentDirectory
-  rootDir <- gets rootDirectory
-  let dir =
-       case path of
-         '/':_ -> rootDir
-         _ -> currentDir
-  getFileByRelativePath (stringToPath path) dir
-
+getFileByPath stringPath = do
+  absolutePath <- toAbsolutePath stringPath
+  liftIO $ print absolutePath
+  getFileByAbsolutePath absolutePath
+  
+getFileByAbsolutePath :: Path -> FileSystem File
+getFileByAbsolutePath path = do
+  root <- gets rootDirectory
+  case path of
+    ("/" :| []) -> return root
+    ("/" :| remaining) -> getFileByRelativePath (NE.fromList remaining) root
+    relativePath -> getFileByRelativePath relativePath root
+  
 getFileByRelativePath :: Path -> File -> FileSystem File
 getFileByRelativePath _ Document{} = throw DirectoryExpected
-getFileByRelativePath ("/" :| []) _ = gets rootDirectory
-getFileByRelativePath ("/" :| path) _ = gets rootDirectory >>= getFileByRelativePath (fromList path)
+getFileByRelativePath absPath@("/" :| _) _ = getFileByAbsolutePath absPath 
 getFileByRelativePath (x :| []) root = moveNext root x
 getFileByRelativePath (x :| next : xs) root = moveNext root x >>= getFileByRelativePath (next :| xs)
 
@@ -110,7 +113,9 @@ stringToPath ('/':cs) = "/" :| NE.drop 1 (splitOn '/' cs)
 stringToPath s = splitOn '/' s
 
 pathToString :: Path -> StringPath
-pathToString = intercalate "/" . NE.toList
+pathToString ("/":|[]) = "/" 
+pathToString ("/":|cs) = "/" ++ (intercalate "/" cs) 
+pathToString path = intercalate "/" . NE.toList $ path 
 
 extensionFromPath :: Path -> String
 extensionFromPath = NE.last . splitOn '.' . NE.last
@@ -132,3 +137,25 @@ constructDirectoryByPath path  =
     , directoryContents = []
     , directoryParent = Nothing
     }
+
+toAbsolutePath :: StringPath -> FileSystem Path
+toAbsolutePath path = do
+  fsRoot <- gets rootDirectory
+  currentDir <- gets currentDirectory
+  return $ case path of
+    '/':cs -> _toAbsolutePath (stringToPath cs) fsRoot
+    _ -> _toAbsolutePath (stringToPath path) currentDir
+
+_toAbsolutePath :: Path -> File -> Path
+_toAbsolutePath path root = NE.fromList $ foldl foldFunc (NE.toList $ filePath root) path
+  where
+    foldFunc acc dir =
+      case dir of
+        "." -> acc
+        ".." -> safeInit acc
+        s -> acc ++ [s]  
+
+safeInit :: [String] -> [String]
+safeInit [] = []
+safeInit ["/"] = ["/"]
+safeInit list = Prelude.init list

@@ -55,10 +55,11 @@ getFileInfo path = do
   case file of
     dir@Directory{} -> do
       let filepath = pathToString $ filePath dir
+      let parentPath = show $ pathToString <$> directoryParent dir
       let permissions = filePermissions dir
       let fileCount = Prelude.length $ directoryContents dir
       let size = getFileSize dir
-      return $ constructDirectoryInfo filepath permissions fileCount size
+      return $ constructDirectoryInfo filepath parentPath permissions fileCount size
     doc@Document{} -> do
       let filepath = pathToString $ filePath doc
       let permissions = filePermissions doc
@@ -68,9 +69,10 @@ getFileInfo path = do
       let size = getFileSize doc
       return $ constructDocumentInfo filepath permissions extension creationTime modificationTime size
 
-constructDirectoryInfo :: StringPath -> Permissions -> Int -> Int64 -> String
-constructDirectoryInfo path permissions fileCount size =
+constructDirectoryInfo :: StringPath -> StringPath -> Permissions -> Int -> Int64 -> String
+constructDirectoryInfo path parentPath permissions fileCount size =
   "Path: " ++ path ++ "\n" ++
+  "Parent: " ++ parentPath ++ "\n" ++
   "Permissions: " ++ show permissions ++ "\n" ++
   "Files: " ++ show fileCount ++ "\n" ++
   "Size: " ++ show size ++ "B"

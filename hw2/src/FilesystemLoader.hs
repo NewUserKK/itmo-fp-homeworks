@@ -17,7 +17,7 @@ loadFilesystem :: String -> IO FSState
 loadFilesystem rootPath = do
   fsRoot <- makeAbsolute rootPath
   print $ fsRoot
-  root <- fromJust <$> (runMaybeT $ constructDirectory fsRoot "")
+  root <- fromJust <$> (runMaybeT $ constructDirectory fsRoot "" "/")
   return FSState
     { currentDirectory = root
     , rootDirectory = root
@@ -25,36 +25,43 @@ loadFilesystem rootPath = do
     }
 
 
-getFolderContents :: FilePath -> IO [File]
-getFolderContents path = do
-  withCurrentDirectory path $ do
+getFolderContents :: FilePath -> FilePath -> FilePath -> IO [File]
+getFolderContents realFsRoot realPath localPath = do
+  withCurrentDirectory realPath $ do
     currentDir <- getCurrentDirectory
     paths <- listDirectory currentDir
-    catMaybes <$> traverse (runMaybeT . fileFromPath currentDir) paths
+--    liftIO $ print $ paths
+--    liftIO $ print $ "getFolderContents currentDir: " ++ realPath
+--    liftIO $ print $ "getFolderContents localPath: " ++ localPath
+    catMaybes <$> traverse (runMaybeT . fileFromPath realFsRoot localPath) paths
 
 
-fileFromPath :: FilePath -> FilePath -> MaybeT IO (File)
-fileFromPath parentPath path = 
-  (constructDocument parentPath path) <|> (constructDirectory parentPath path)
+fileFromPath :: FilePath -> FilePath -> FilePath -> MaybeT IO (File)
+fileFromPath realFsRoot parentPath path =
+  (constructDocument parentPath path) <|> (constructDirectory realFsRoot parentPath path)
 
 
-constructDirectory :: FilePath -> FilePath -> MaybeT IO (File)
-constructDirectory parentPath path = do
-  let realPath = parentPath </> path
-  let localPath = stringToPath $ if path == "" then "/" else path
+constructDirectory :: FilePath -> FilePath -> FilePath -> MaybeT IO (File)
+constructDirectory realFsRoot localParentPath name = do
+  let localPath = localParentPath </> name
+  let realPath = realFsRoot ++ localPath
+
+--  liftIO $ print $ "constructDirectory name: " ++ name
+--  liftIO $ print $ "constructDirectory localPath: " ++ localPath
+--  liftIO $ print $ "constructDirectory realPath: " ++ realPath
+
   isDirectory <- liftIO $ doesDirectoryExist realPath
-
   guard isDirectory
 
   let updateFunction = \file ->
        case file of
-          d@Directory{} -> d { directoryParent = Just localPath }
+          dir@Directory{} -> dir { directoryParent = Just $ stringToPath localPath }
           Document{} -> file
-  contents <- liftIO $ (map updateFunction) <$> getFolderContents realPath
-  permissions <- liftIO $ getPermissions path
+  contents <- liftIO $ (map updateFunction) <$> getFolderContents realFsRoot realPath localPath
+  permissions <- liftIO $ getPermissions realPath
 
   return Directory
-    { filePath = localPath
+    { filePath = stringToPath localPath
     , filePermissions = permissions
     , directoryContents = contents
     , directoryParent = Nothing
