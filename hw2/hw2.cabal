@@ -18,7 +18,12 @@ tested-with:         GHC == 8.0.1
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Filesystem, Utils, FilesystemLoader, FilesystemCommands
+  exposed-modules:     Filesystem
+                     , Path
+                     , File
+                     , Utils
+                     , FilesystemLoader
+                     , FilesystemCommands
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
                      , mtl

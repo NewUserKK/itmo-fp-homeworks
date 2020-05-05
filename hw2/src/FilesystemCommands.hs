@@ -7,6 +7,8 @@ import Control.Monad.State
 import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy as BS
 import Filesystem
+import Path
+import File
 import Control.Exception (throw)
 import GHC.Int (Int64)
 import System.Directory (Permissions)
@@ -18,10 +20,10 @@ changeDirectory path = do
   newDirectory <- liftIO $ evalStateT (getDirectoryByPath path) st
   modify (\s -> s { currentDirectory = newDirectory })
 
-listContents :: StringPath -> FileSystem [String]
-listContents path = do
+getContents :: StringPath -> FileSystem [File]
+getContents path = do
   dir <- getDirectoryByPath path
-  return $ (Prelude.map nameByPath) $ directoryContents dir
+  return $ directoryContents dir
 
 makeDirectory :: StringPath -> FileSystem ()
 makeDirectory path = do
@@ -94,7 +96,6 @@ getFileSize doc@Document{} = BS.length $ documentContent doc
 findByName :: StringPath -> String -> FileSystem [String]
 findByName root name = do
   file <- getFileByPath root
-  liftIO $ print file
   st <- get
   let foldFunc =
         \dir acc -> do
@@ -107,5 +108,3 @@ findByName root name = do
   t <- liftIO $ foldr foldFunc (pure []) (filterDirectories $ directoryContents file)
   return $ Prelude.map (pathToString . filePath) t
   
-filterDirectories :: [File] -> [File]
-filterDirectories = Prelude.filter (\case Directory{} -> True; _ -> False)

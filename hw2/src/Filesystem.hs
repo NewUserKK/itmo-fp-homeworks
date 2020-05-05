@@ -9,34 +9,12 @@ import qualified Data.ByteString.Lazy as BS
 import Data.List (find, intercalate)
 import Data.List.NonEmpty as NE
 import Utils
+import Path
+import File
 import Data.Time (UTCTime)
 import System.Directory
 
-type Path = NonEmpty String
-
-type StringPath = String
-
 type FileSystem a = StateT FSState IO a
-
-data File
-  = Directory
-      { filePath :: Path
-      , filePermissions :: Permissions
-      , directoryContents :: [File]
-      , directoryParent :: Maybe Path
-      }
-  | Document
-      { filePath :: Path
-      , filePermissions :: Permissions
-      , documentExtension :: String
-      , documentCreationTime :: UTCTime
-      , documentUpdateTime :: UTCTime
-      , documentSize :: Int
-      , documentContent :: BS.ByteString
-      }
-
-instance Show File where
-  show = pathToString . filePath
 
 data FSState =
   FSState
@@ -58,7 +36,7 @@ getFileByPath stringPath = do
   absolutePath <- toAbsolutePath stringPath
   liftIO $ print absolutePath
   getFileByAbsolutePath absolutePath
-  
+
 getFileByAbsolutePath :: Path -> FileSystem File
 getFileByAbsolutePath path = do
   root <- gets rootDirectory
@@ -66,10 +44,10 @@ getFileByAbsolutePath path = do
     ("/" :| []) -> return root
     ("/" :| remaining) -> getFileByRelativePath (NE.fromList remaining) root
     relativePath -> getFileByRelativePath relativePath root
-  
+
 getFileByRelativePath :: Path -> File -> FileSystem File
 getFileByRelativePath _ Document{} = throw DirectoryExpected
-getFileByRelativePath absPath@("/" :| _) _ = getFileByAbsolutePath absPath 
+getFileByRelativePath absPath@("/" :| _) _ = getFileByAbsolutePath absPath
 getFileByRelativePath (x :| []) root = moveNext root x
 getFileByRelativePath (x :| next : xs) root = moveNext root x >>= getFileByRelativePath (next :| xs)
 
@@ -102,23 +80,7 @@ findInFolder folder name = do
       case directoryParent folder of
         Just path -> Just <$> getFileByPath (pathToString path)
         Nothing -> return $ Just folder
-    _ -> return $ find ((== name) . nameByPath) (directoryContents folder)
-
-nameByPath :: File -> String
-nameByPath = NE.last . filePath
-
-stringToPath :: StringPath -> Path
-stringToPath "/" = "/":|[]
-stringToPath ('/':cs) = "/" :| NE.drop 1 (splitOn '/' cs)
-stringToPath s = splitOn '/' s
-
-pathToString :: Path -> StringPath
-pathToString ("/":|[]) = "/" 
-pathToString ("/":|cs) = "/" ++ (intercalate "/" cs) 
-pathToString path = intercalate "/" . NE.toList $ path 
-
-extensionFromPath :: Path -> String
-extensionFromPath = NE.last . splitOn '.' . NE.last
+    _ -> return $ find ((name ==) . fileName) (directoryContents folder)
 
 constructDirectoryRelative :: Path -> String -> File
 constructDirectoryRelative parent name =
@@ -152,10 +114,10 @@ _toAbsolutePath path root = NE.fromList $ foldl foldFunc (NE.toList $ filePath r
     foldFunc acc dir =
       case dir of
         "." -> acc
-        ".." -> safeInit acc
-        s -> acc ++ [s]  
+        ".." -> toParentPath acc
+        s -> acc ++ [s]
 
-safeInit :: [String] -> [String]
-safeInit [] = []
-safeInit ["/"] = ["/"]
-safeInit list = Prelude.init list
+toParentPath :: [String] -> [String]
+toParentPath [] = []
+toParentPath ["/"] = ["/"]
+toParentPath list = Prelude.init list

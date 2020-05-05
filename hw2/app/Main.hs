@@ -12,6 +12,8 @@ import FilesystemLoader
 import Options.Applicative
 import System.IO (hFlush, stdout)
 import Utils
+import Path
+import File
 
 data Arguments =
   Arguments
@@ -89,8 +91,8 @@ execCD path = do
 
 execLs :: StringPath -> FileSystem ()
 execLs path = do
-  contents <- listContents path
-  liftIO $ print contents
+  contents <- FilesystemCommands.getContents path
+  liftIO $ print $ (Prelude.map fileName) contents
 
 execMkdir :: StringPath -> FileSystem ()
 execMkdir path = makeDirectory path
