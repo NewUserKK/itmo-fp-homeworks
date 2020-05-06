@@ -41,4 +41,4 @@ findInFolder :: File -> String -> Maybe File
 findInFolder folder name = find ((name ==) . fileName) (directoryContents folder)
 
 isParentOf :: File -> File -> Bool
-isParentOf parent file = (NE.toList $ filePath parent) `NE.isPrefixOf` (filePath file)
+isParentOf parent file = (filePath parent) `Path.isParentOf` (filePath file)

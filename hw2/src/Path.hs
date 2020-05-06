@@ -27,3 +27,6 @@ extensionFromPath = NE.last . splitOn '.' . NE.last
 getParentPath :: Path -> Path
 getParentPath root@("/" :| []) = root
 getParentPath list = NE.fromList $ NE.init list
+
+isParentOf :: Path -> Path -> Bool
+isParentOf parent path = (NE.toList parent) `NE.isPrefixOf` path

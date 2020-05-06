@@ -33,6 +33,7 @@ data CommandExecutionError
   | FileNotFound
   | CannotCreateRoot
   | CannotRemoveRoot
+  | CannotRemoveParent
   deriving (Show, Exception)
 
 
@@ -148,7 +149,10 @@ createFileRecursively _ Document{} _ _ = throwM DirectoryExpected
 removeFile :: StringPath -> FileSystem ()
 removeFile stringPath = do
    path <- toAbsolutePath stringPath
-   gets rootDirectory >>= removeFileRecursively path >>= updateFileSystemWithNewRoot
+   currentDirPath <- filePath <$> gets currentDirectory
+   if currentDirPath `Path.isParentOf` path
+     then throwM CannotRemoveParent
+     else gets rootDirectory >>= removeFileRecursively path >>= updateFileSystemWithNewRoot
 
 removeFileRecursively :: Path -> File -> FileSystem File
 removeFileRecursively ("/" :| []) Directory{} = throwM CannotRemoveRoot
