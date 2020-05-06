@@ -24,3 +24,9 @@ splitOn splitElement list =
 
 (<:|) :: NonEmpty a -> a -> NonEmpty a
 (<:|) ne a = ne <> (a :| [])
+
+remove :: Eq a => [a] -> a -> [a]
+remove contents file = Prelude.filter ((/=) file) contents
+
+update :: Eq a => [a] -> a -> a -> [a]
+update contents file newFile = remove contents file ++ [newFile]

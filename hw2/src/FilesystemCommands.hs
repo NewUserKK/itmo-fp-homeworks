@@ -50,6 +50,19 @@ makeFile path text = do
     }
   createFile path file False
 
+removeFile :: StringPath -> FileSystem ()
+removeFile = Filesystem.removeFile
+
+appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
+appendToFile path text = do
+  file <- getDocumentByPath path
+  modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
+  let newFile = file {
+    documentUpdateTime = modificationTime,
+    documentContent = (documentContent file) <> text
+  }
+  createFileOverwriting path newFile
+
 readFileContents :: StringPath -> FileSystem BS.ByteString
 readFileContents path = do
   file <- getDocumentByPath path
@@ -102,8 +115,3 @@ findByName rootPath name = do
   root <- getDirectoryByPath rootPath
   return $ Prelude.map (pathToString . filePath) (findInPathByName root name)
   
-
-appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
-appendToFile path text = do
-  file <- getDocumentByPath path
-  createFileOverwriting path (file { documentContent = (documentContent file) <> text })

@@ -28,9 +28,11 @@ data FSState =
 data CommandExecutionError
   = DirectoryExpected
   | DocumentExpected
-  | NoSuchDirectory
+  | NoSuchFile
   | FileAlreadyExists
+  | FileNotFound
   | CannotCreateRoot
+  | CannotRemoveRoot
   deriving (Show, Exception)
 
 
@@ -73,7 +75,7 @@ moveNext :: File -> String -> FileSystem File
 moveNext root name =
   case findInFolder root name of
     Just f -> return f
-    Nothing -> throwM NoSuchDirectory
+    Nothing -> throwM NoSuchFile
 
 getDirectoryByPath :: StringPath -> FileSystem File
 getDirectoryByPath path = do
@@ -108,9 +110,7 @@ createFile stringPath newFile overwrite = do
    path <- toAbsolutePath stringPath
    root <- gets rootDirectory
    newRoot <- createFileRecursively path root newFile overwrite
-   modify (\s -> s { rootDirectory = newRoot })
-   newCurrentDir <- gets currentDirectory >>= getFileByPath . pathToString . filePath
-   modify (\s -> s { currentDirectory = newCurrentDir })
+   updateFileSystemWithNewRoot newRoot
 
 createFileRecursively :: Path -> File -> File -> Bool -> FileSystem File
 createFileRecursively ("/" :| []) Directory{} _ _ = throwM CannotCreateRoot
@@ -126,13 +126,13 @@ createFileRecursively (name :| []) root@Directory{ directoryContents = contents 
     Just file -> 
       if (not overwrite) 
       then throwM FileAlreadyExists 
-      else return $ updateFileInDirectory newRoot file newFile 
+      else updateFileInDirectory newRoot file newFile
     Nothing -> return $ newRoot
 createFileRecursively path@(name :| next) root@Directory{} newFile overwrite =
   case findInFolder root name of
     Just dir@(Directory {}) -> do
       new <- createFileRecursively (NE.fromList next) dir newFile overwrite
-      return $ updateFileInDirectory root dir new
+      updateFileInDirectory root dir new
     Nothing -> do
       let newDirectory = Directory {
           filePath = (filePath root) <:| name
@@ -140,27 +140,50 @@ createFileRecursively path@(name :| next) root@Directory{} newFile overwrite =
         , fileParent = Just $ filePath root
         , directoryContents = []
         }
-      createFileRecursively path (addToDirectory root newDirectory) newFile overwrite
+      updatedRoot <- addToDirectory root newDirectory
+      createFileRecursively path updatedRoot newFile overwrite
     Just (Document {}) -> throwM DirectoryExpected
 createFileRecursively _ Document{} _ _ = throwM DirectoryExpected
 
-addToDirectory :: File -> File -> File
-addToDirectory dir@Directory{ directoryContents = contents } file = 
-  dir { directoryContents = contents ++ [file] } 
-addToDirectory _ _ = throw DirectoryExpected
+removeFile :: StringPath -> FileSystem ()
+removeFile stringPath = do
+   path <- toAbsolutePath stringPath
+   gets rootDirectory >>= removeFileRecursively path >>= updateFileSystemWithNewRoot
 
-removeFromDirectory :: File -> File -> File
-removeFromDirectory dir@Directory{ directoryContents = contents } file = 
-  dir { directoryContents = remove contents file } 
-removeFromDirectory _ _ = throw DirectoryExpected
+removeFileRecursively :: Path -> File -> FileSystem File
+removeFileRecursively ("/" :| []) Directory{} = throwM CannotRemoveRoot
+removeFileRecursively ("/" :| next) root@Directory{}  =
+  removeFileRecursively (NE.fromList next) root 
+removeFileRecursively (name :| []) root@Directory{} = do
+  case findInFolder root name of
+    Just file -> removeFromDirectory root file
+    Nothing -> throwM FileNotFound
+removeFileRecursively (name :| next) root@Directory{} =
+  case findInFolder root name of
+    Just dir@(Directory {}) -> do
+      new <- removeFileRecursively (NE.fromList next) dir
+      updateFileInDirectory root dir new
+    Just Document{} -> throwM DirectoryExpected
+    Nothing -> throwM FileNotFound
+removeFileRecursively _ Document{} = throwM DirectoryExpected
 
-updateFileInDirectory :: File -> File -> File -> File
+updateFileSystemWithNewRoot :: File -> FileSystem ()
+updateFileSystemWithNewRoot newRoot = do
+  modify (\s -> s { rootDirectory = newRoot })
+  newCurrentDir <- gets currentDirectory >>= getFileByPath . pathToString . filePath
+  modify (\s -> s { currentDirectory = newCurrentDir })
+
+addToDirectory :: File -> File -> FileSystem File
+addToDirectory dir@Directory{ directoryContents = contents } file =
+  return dir { directoryContents = contents ++ [file] }
+addToDirectory _ _ = throwM DirectoryExpected
+
+removeFromDirectory :: File -> File -> FileSystem File
+removeFromDirectory dir@Directory{ directoryContents = contents } file =
+  return dir { directoryContents = remove contents file }
+removeFromDirectory _ _ = throwM DirectoryExpected
+
+updateFileInDirectory :: File -> File -> File -> FileSystem File
 updateFileInDirectory dir@Directory{ directoryContents = contents } file newFile =
-  dir { directoryContents = update contents file newFile }
-updateFileInDirectory _ _ _ = throw DirectoryExpected
-
-remove :: Eq a => [a] -> a -> [a]
-remove contents file = Prelude.filter ((/=) file) contents
-
-update :: Eq a => [a] -> a -> a -> [a]
-update contents file newFile = remove contents file ++ [newFile]
+  return dir { directoryContents = update contents file newFile }
+updateFileInDirectory _ _ _ = throwM DirectoryExpected

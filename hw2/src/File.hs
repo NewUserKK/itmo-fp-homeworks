@@ -3,11 +3,11 @@
 module File where
 
 import Data.List
+import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Path
-import System.Directory (Permissions, emptyPermissions)
-import Utils ((<:|))
+import System.Directory (Permissions)
 import GHC.Int (Int64)
 
 data File
@@ -40,11 +40,5 @@ fileName = nameByPath . filePath
 findInFolder :: File -> String -> Maybe File
 findInFolder folder name = find ((name ==) . fileName) (directoryContents folder)
 
-constructDirectoryRelative :: Path -> String -> File
-constructDirectoryRelative parent name =
-  Directory
-    { filePath = parent <:| name
-    , filePermissions = emptyPermissions
-    , directoryContents = []
-    , fileParent = Just parent
-    }
+isParentOf :: File -> File -> Bool
+isParentOf parent file = (NE.toList $ filePath parent) `NE.isPrefixOf` (filePath file)

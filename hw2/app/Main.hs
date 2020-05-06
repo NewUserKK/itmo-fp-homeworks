@@ -7,7 +7,7 @@ import Control.Monad.Catch
 import Control.Monad.State
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE
-import Filesystem
+import Filesystem (FileSystem, FSState(..), CommandExecutionError)
 import FilesystemCommands
 import FilesystemLoader
 import Options.Applicative
@@ -26,6 +26,7 @@ data Command
   | ListFiles StringPath
   | MakeDirectory StringPath
   | MakeDocument StringPath BS.ByteString
+  | RemoveFile StringPath
   | ReadFile StringPath
   | AppendFile StringPath BS.ByteString
   | PrintInfo StringPath
@@ -71,6 +72,7 @@ parseCommand s =
     "cd" :| [path] -> Right $ ChangeDirectory path
     "ls" :| [path] -> Right $ ListFiles path
     "mkdir" :| [path] -> Right $ MakeDirectory path
+    "rm" :| [path] -> Right $ RemoveFile path
     "touch" :| path : [text] -> Right $ MakeDocument path $ BS.pack text
     "touch" :| [path] -> Right $ MakeDocument path ""
     "append-file" :| path : [text] -> Right $ AppendFile path $ BS.pack text
@@ -86,6 +88,7 @@ execCommand e =
     ListFiles path -> execLs path
     MakeDirectory path -> execMkdir path
     MakeDocument path text -> execTouch path text
+    RemoveFile path -> execRm path
     ReadFile path -> execReadFile path
     AppendFile path text -> execAppendFile path text
     PrintInfo path -> execPrintInfo path
@@ -107,6 +110,9 @@ execMkdir = makeDirectory
 
 execTouch :: StringPath -> BS.ByteString -> FileSystem ()
 execTouch = makeFile
+
+execRm :: StringPath -> FileSystem ()
+execRm = FilesystemCommands.removeFile
 
 execReadFile :: StringPath -> FileSystem ()
 execReadFile path = do
