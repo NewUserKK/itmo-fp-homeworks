@@ -19,6 +19,7 @@ extra-deps:
 - process-1.6.8.2@sha256:c2c95560dab7cea7f77b190166c3916945155f0daf5928b28c20a0ac34d4ea2a,2468
 - bytestring-0.10.8.2
 - time-1.8.0.2
+- Diff-0.4.0
 
 flags: {}
 

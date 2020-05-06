@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE
 import Filesystem (FileSystem, FSState(..), CommandExecutionError)
 import FilesystemCommands
+import CVSCommands
 import FilesystemLoader
 import Options.Applicative
 import System.IO (hFlush, stdout)
@@ -32,6 +33,7 @@ data Command
   | Copy StringPath StringPath
   | PrintInfo StringPath
   | Find StringPath String
+  | CVSInit StringPath
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -81,12 +83,14 @@ parseCommand s =
     "cat" :| [path] -> Right $ ReadFile path
     "info" :| [path] -> Right $ PrintInfo path
     "find" :| path : [name] -> Right $ Find path name
+    "cvs" :| ["init"] -> Right $ CVSInit "."
+    "cvs" :| "init" : [path] -> Right $ CVSInit path
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
 execCommand e =
   case e of
-    ChangeDirectory path -> execCD path
+    ChangeDirectory path -> execCd path
     ListFiles path -> execLs path
     MakeDirectory path -> execMkdir path
     MakeDocument path text -> execTouch path text
@@ -96,12 +100,10 @@ execCommand e =
     AppendFile path text -> execAppendFile path text
     PrintInfo path -> execPrintInfo path
     Find path name -> execFind path name
+    CVSInit path -> execCvsInit path
 
-execCD :: StringPath -> FileSystem ()
-execCD path = do
-  changeDirectory path
-  newState <- get
-  liftIO $ print $ filePath . currentDirectory $ newState
+execCd :: StringPath -> FileSystem ()
+execCd path = changeDirectory path
 
 execLs :: StringPath -> FileSystem ()
 execLs path = do
@@ -124,7 +126,7 @@ execReadFile :: StringPath -> FileSystem ()
 execReadFile path = do
   contents <- readFileContents path
   liftIO $ BS.putStrLn contents
-  
+
 execAppendFile :: StringPath -> BS.ByteString -> FileSystem ()
 execAppendFile = appendToFile
 
@@ -135,6 +137,9 @@ execFind :: StringPath -> String -> FileSystem ()
 execFind path name = do
   result <- findByName path name
   liftIO $ print result
+
+execCvsInit :: StringPath -> FileSystem ()
+execCvsInit = cvsInit
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

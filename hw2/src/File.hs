@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module File where
 
@@ -7,7 +8,7 @@ import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Path
-import System.Directory (Permissions)
+import System.Directory
 import GHC.Int (Int64)
 
 data File
@@ -42,3 +43,30 @@ findInFolder folder name = find ((name ==) . fileName) (directoryContents folder
 
 isParentOf :: File -> File -> Bool
 isParentOf parent file = (filePath parent) `Path.isParentOf` (filePath file)
+
+emptyDirectory :: Path -> File
+emptyDirectory path = Directory {
+   filePath = path
+  , filePermissions = defaultPermissions
+  , directoryContents = []
+  , fileParent = Just $ getParentPath path
+  }
+  
+emptyDocument :: Path -> UTCTime -> File
+emptyDocument path creationTime = Document 
+  { filePath = path
+  , filePermissions = defaultPermissions
+  , fileParent = Nothing
+  , documentCreationTime = creationTime
+  , documentUpdateTime = creationTime
+  , documentSize = 0
+  , documentContent = ""
+  }
+  
+defaultPermissions :: Permissions
+defaultPermissions = emptyPermissions {
+  readable = True,
+  writable = True,
+  executable = False,
+  searchable = True
+}

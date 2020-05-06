@@ -5,16 +5,11 @@ module Filesystem where
 
 import Control.Exception
 import Control.Monad.State
-import qualified Data.ByteString.Lazy as BS
-import Data.List (find, intercalate)
 import Data.List.NonEmpty as NE
 import Utils
 import Path
 import File
-import Data.Time (UTCTime)
-import Control.Applicative ((<|>))
 import Control.Monad.Catch (throwM)
-import System.Directory (emptyPermissions)
 
 type FileSystem a = StateT FSState IO a
 
@@ -31,23 +26,24 @@ data CommandExecutionError
   | NoSuchFile
   | FileAlreadyExists
   | FileNotFound
+  | FailedToCreateFile
   | CannotCreateRoot
   | CannotRemoveRoot
   | CannotRemoveParent
   deriving (Show, Exception)
 
 
-toAbsolutePath :: StringPath -> FileSystem Path
-toAbsolutePath stringPath = do
+toAbsolutePath :: Path -> FileSystem Path
+toAbsolutePath path = do
   fsRoot <- gets rootDirectory
   currentDir <- gets currentDirectory
-  return $ case stringPath of
-    "/" -> stringToPath "/"
-    '/':cs -> _toAbsolutePath (stringToPath cs) fsRoot
-    _ -> _toAbsolutePath (stringToPath stringPath) currentDir
+  return $ case path of
+    "/":|[] -> stringToPath "/"
+    "/":|cs -> _toAbsolutePath (NE.fromList cs) fsRoot
+    _ -> _toAbsolutePath path currentDir
   where
     _toAbsolutePath :: Path -> File -> Path
-    _toAbsolutePath path root = foldl foldFunc (filePath root) path
+    _toAbsolutePath path' root = foldl foldFunc (filePath root) path'
       where
         foldFunc acc dir =
           case dir of
@@ -55,8 +51,8 @@ toAbsolutePath stringPath = do
             ".." -> getParentPath acc
             s -> acc <:| s
 
-getFileByPath :: StringPath -> FileSystem (Maybe File)
-getFileByPath stringPath = toAbsolutePath stringPath >>= getFileByAbsolutePath
+getFileByPath :: Path -> FileSystem (Maybe File)
+getFileByPath path = toAbsolutePath path >>= getFileByAbsolutePath
 
 getFileByAbsolutePath :: Path -> FileSystem (Maybe File)
 getFileByAbsolutePath path = do
@@ -78,7 +74,7 @@ moveNext root name =
     Just f -> return f
     Nothing -> throwM NoSuchFile
 
-getDirectoryByPath :: StringPath -> FileSystem File
+getDirectoryByPath :: Path -> FileSystem File
 getDirectoryByPath path = do
   file <- getFileByPath path
   case file of
@@ -86,7 +82,7 @@ getDirectoryByPath path = do
     Just Document{} -> throwM DirectoryExpected
     Nothing -> throwM NoSuchFile
 
-getDocumentByPath :: StringPath -> FileSystem File
+getDocumentByPath :: Path -> FileSystem File
 getDocumentByPath path = do
   file <- getFileByPath path
   case file of
@@ -101,31 +97,32 @@ findInPathByName root name = do
   where
     foldFunc dir acc = acc ++ findInPathByName dir name
 
-createFileOverwriting :: StringPath -> File -> FileSystem ()
-createFileOverwriting stringPath newFile = createFile stringPath newFile True
+createFileByName :: Path -> String -> File -> Bool -> FileSystem File
+createFileByName parentPath name file overwrite =
+  createFile (parentPath <:| name) file overwrite
 
-createFile :: StringPath -> File -> Bool -> FileSystem ()
-createFile stringPath newFile overwrite = do
-   path <- toAbsolutePath stringPath
-   root <- gets rootDirectory
-   newRoot <- createFileRecursively path root newFile overwrite
-   updateFileSystemWithNewRoot newRoot
+createFile :: Path -> File -> Bool -> FileSystem File
+createFile path newFile overwrite = do
+  absPath <- toAbsolutePath path
+  root <- gets rootDirectory
+  newRoot <- createFileRecursively absPath root newFile overwrite
+  updateFileSystemWithNewRoot newRoot
+  created <- getFileByPath absPath
+  case created of
+    Just file -> return file
+    Nothing -> throwM FailedToCreateFile
 
   -- TODO check root
-copyFile :: File -> StringPath -> FileSystem ()
-copyFile file@Document{} targetPath = do
+copyFile :: File -> Path -> FileSystem ()
+copyFile file targetPath = do
   targetAbsPath <- toAbsolutePath targetPath
   let newPath = targetAbsPath <:| (NE.last $ filePath file)
   root <- gets rootDirectory
   newRoot <- createFileRecursively newPath root file False
   updateFileSystemWithNewRoot newRoot
-copyFile file@Directory{} targetPath = do
-  targetAbsPath <- toAbsolutePath targetPath
-  let newPath = targetAbsPath <:| (NE.last $ filePath file)
-  root <- gets rootDirectory
-  newRoot <- createFileRecursively newPath root file False
-  updateFileSystemWithNewRoot newRoot
-  updateFileSystemWithNewRoot $ updateParentsOfDirectoryContent newRoot
+  case file of
+    Directory{} -> updateFileSystemWithNewRoot $ updateParentsOfDirectoryContent newRoot
+    Document{} -> return ()
 
 updateParentsOfDirectoryContent :: File -> File
 updateParentsOfDirectoryContent dir@Directory{ filePath = path, directoryContents = contents } = 
@@ -168,24 +165,19 @@ createFileRecursively path@(name :| next) root@Directory{} newFile overwrite =
       new <- createFileRecursively (NE.fromList next) dir newFile overwrite
       updateFileInDirectory root dir new
     Nothing -> do
-      let newDirectory = Directory {
-          filePath = (filePath root) <:| name
-        , filePermissions = emptyPermissions
-        , fileParent = Just $ filePath root
-        , directoryContents = []
-        }
+      let newDirectory = emptyDirectory $ (filePath root) <:| name
       updatedRoot <- addToDirectory root newDirectory
       createFileRecursively path updatedRoot newFile overwrite
     Just (Document {}) -> throwM DirectoryExpected
 createFileRecursively _ Document{} _ _ = throwM DirectoryExpected
 
-removeFile :: StringPath -> FileSystem ()
-removeFile stringPath = do
-   path <- toAbsolutePath stringPath
+removeFile :: Path -> FileSystem ()
+removeFile path = do
+   absPath <- toAbsolutePath path
    currentDirPath <- filePath <$> gets currentDirectory
-   if path `Path.isParentOf` currentDirPath
+   if absPath `Path.isParentOf` currentDirPath
      then throwM CannotRemoveParent
-     else gets rootDirectory >>= removeFileRecursively path >>= updateFileSystemWithNewRoot
+     else gets rootDirectory >>= removeFileRecursively absPath >>= updateFileSystemWithNewRoot
 
 removeFileRecursively :: Path -> File -> FileSystem File
 removeFileRecursively ("/" :| []) Directory{} = throwM CannotRemoveRoot
@@ -205,7 +197,7 @@ removeFileRecursively _ Document{} = throwM DirectoryExpected
 updateFileSystemWithNewRoot :: File -> FileSystem ()
 updateFileSystemWithNewRoot newRoot = do
   modify (\s -> s { rootDirectory = newRoot })
-  newCurrentDir <- gets currentDirectory >>= getDirectoryByPath . pathToString . filePath
+  newCurrentDir <- gets currentDirectory >>= getDirectoryByPath . filePath
   modify (\s -> s { currentDirectory = newCurrentDir })
 
 addToDirectory :: File -> File -> FileSystem File
