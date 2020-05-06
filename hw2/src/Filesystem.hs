@@ -100,35 +100,39 @@ findInPathByName root name = do
     foldFunc dir acc =
       acc ++ findInPathByName dir name
 
-createFile :: StringPath -> File -> FileSystem ()
-createFile stringPath newFile = do
+createFileOverwriting :: StringPath -> File -> FileSystem ()
+createFileOverwriting stringPath newFile = createFile stringPath newFile True
+
+createFile :: StringPath -> File -> Bool -> FileSystem ()
+createFile stringPath newFile overwrite = do
    path <- toAbsolutePath stringPath
    root <- gets rootDirectory
-   newRoot <- createFileRecursively path root newFile
+   newRoot <- createFileRecursively path root newFile overwrite
    modify (\s -> s { rootDirectory = newRoot })
    newCurrentDir <- gets currentDirectory >>= getFileByPath . pathToString . filePath
    modify (\s -> s { currentDirectory = newCurrentDir })
 
-createFileRecursively :: Path -> File -> File -> FileSystem File
-createFileRecursively ("/" :| []) Directory{} _ = throwM CannotCreateRoot
-createFileRecursively ("/" :| next) root@Directory{} newFile =
-  createFileRecursively (NE.fromList next) root newFile
-createFileRecursively (name :| []) root@Directory{ directoryContents = contents } newFile =
+createFileRecursively :: Path -> File -> File -> Bool -> FileSystem File
+createFileRecursively ("/" :| []) Directory{} _ _ = throwM CannotCreateRoot
+createFileRecursively ("/" :| next) root@Directory{} newFile overwrite =
+  createFileRecursively (NE.fromList next) root newFile overwrite
+createFileRecursively (name :| []) root@Directory{ directoryContents = contents } newFile overwrite = do
+  let fileWithUpdatedPaths = newFile {
+      filePath = (filePath root) <:| name
+    , fileParent = Just $ filePath root
+    }
+  let newRoot = root { directoryContents = contents ++ [fileWithUpdatedPaths] }
   case findInFolder root name of
-    Just _ -> throwM FileAlreadyExists
-    Nothing -> do
-      let fileWithUpdatedPaths = newFile {
-          filePath = (filePath root) <:| name
-        , fileParent = Just $ filePath root
-        }
-      return $ root { directoryContents = contents ++ [fileWithUpdatedPaths] }
-createFileRecursively path@(name :| next) root@Directory{ directoryContents = contents } newFile =
+    Just file -> 
+      if (not overwrite) 
+      then throwM FileAlreadyExists 
+      else return $ updateFileInDirectory newRoot file newFile 
+    Nothing -> return $ newRoot
+createFileRecursively path@(name :| next) root@Directory{} newFile overwrite =
   case findInFolder root name of
     Just dir@(Directory {}) -> do
-      new <- createFileRecursively (NE.fromList next) dir newFile
-      return $ root {
-        directoryContents = Prelude.filter ((/=) dir) contents ++ [new]
-      }
+      new <- createFileRecursively (NE.fromList next) dir newFile overwrite
+      return $ updateFileInDirectory root dir new
     Nothing -> do
       let newDirectory = Directory {
           filePath = (filePath root) <:| name
@@ -136,8 +140,27 @@ createFileRecursively path@(name :| next) root@Directory{ directoryContents = co
         , fileParent = Just $ filePath root
         , directoryContents = []
         }
-      createFileRecursively path (root {
-        directoryContents = directoryContents root ++ [newDirectory]
-      }) newFile
+      createFileRecursively path (addToDirectory root newDirectory) newFile overwrite
     Just (Document {}) -> throwM DirectoryExpected
-createFileRecursively _ Document{} _ = throwM DirectoryExpected
+createFileRecursively _ Document{} _ _ = throwM DirectoryExpected
+
+addToDirectory :: File -> File -> File
+addToDirectory dir@Directory{ directoryContents = contents } file = 
+  dir { directoryContents = contents ++ [file] } 
+addToDirectory _ _ = throw DirectoryExpected
+
+removeFromDirectory :: File -> File -> File
+removeFromDirectory dir@Directory{ directoryContents = contents } file = 
+  dir { directoryContents = remove contents file } 
+removeFromDirectory _ _ = throw DirectoryExpected
+
+updateFileInDirectory :: File -> File -> File -> File
+updateFileInDirectory dir@Directory{ directoryContents = contents } file newFile =
+  dir { directoryContents = update contents file newFile }
+updateFileInDirectory _ _ _ = throw DirectoryExpected
+
+remove :: Eq a => [a] -> a -> [a]
+remove contents file = Prelude.filter ((/=) file) contents
+
+update :: Eq a => [a] -> a -> a -> [a]
+update contents file newFile = remove contents file ++ [newFile]

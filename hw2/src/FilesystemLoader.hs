@@ -32,9 +32,6 @@ getFolderContents realFsRoot realPath localPath = do
   withCurrentDirectory realPath $ do
     currentDir <- getCurrentDirectory
     paths <- listDirectory currentDir
---    liftIO $ print $ paths
---    liftIO $ print $ "getFolderContents currentDir: " ++ realPath
---    liftIO $ print $ "getFolderContents localPath: " ++ localPath
     catMaybes <$> traverse (runMaybeT . fileFromPath realFsRoot localPath) paths
 
 
@@ -47,10 +44,6 @@ constructDirectory :: FilePath -> FilePath -> FilePath -> MaybeT IO (File)
 constructDirectory realFsRoot localParentPath name = do
   let localPath = localParentPath </> name
   let realPath = realFsRoot ++ localPath
-
---  liftIO $ print $ "constructDirectory name: " ++ name
---  liftIO $ print $ "constructDirectory localPath: " ++ localPath
---  liftIO $ print $ "constructDirectory realPath: " ++ realPath
 
   isDirectory <- liftIO $ doesDirectoryExist realPath
   guard isDirectory

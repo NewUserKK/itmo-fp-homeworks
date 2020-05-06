@@ -27,6 +27,7 @@ data Command
   | MakeDirectory StringPath
   | MakeDocument StringPath BS.ByteString
   | ReadFile StringPath
+  | AppendFile StringPath BS.ByteString
   | PrintInfo StringPath
   | Find StringPath String
 
@@ -72,6 +73,7 @@ parseCommand s =
     "mkdir" :| [path] -> Right $ MakeDirectory path
     "touch" :| path : [text] -> Right $ MakeDocument path $ BS.pack text
     "touch" :| [path] -> Right $ MakeDocument path ""
+    "append-file" :| path : [text] -> Right $ AppendFile path $ BS.pack text
     "cat" :| [path] -> Right $ ReadFile path
     "info" :| [path] -> Right $ PrintInfo path
     "find" :| path : [name] -> Right $ Find path name
@@ -85,6 +87,7 @@ execCommand e =
     MakeDirectory path -> execMkdir path
     MakeDocument path text -> execTouch path text
     ReadFile path -> execReadFile path
+    AppendFile path text -> execAppendFile path text
     PrintInfo path -> execPrintInfo path
     Find path name -> execFind path name
 
@@ -100,16 +103,19 @@ execLs path = do
   liftIO $ print $ (Prelude.map fileName) contents
 
 execMkdir :: StringPath -> FileSystem ()
-execMkdir path = makeDirectory path
+execMkdir = makeDirectory
 
 execTouch :: StringPath -> BS.ByteString -> FileSystem ()
-execTouch path text = makeFile path text
+execTouch = makeFile
 
 execReadFile :: StringPath -> FileSystem ()
 execReadFile path = do
   contents <- readFileContents path
   liftIO $ BS.putStrLn contents
   
+execAppendFile :: StringPath -> BS.ByteString -> FileSystem ()
+execAppendFile = appendToFile
+
 execPrintInfo :: StringPath -> FileSystem ()
 execPrintInfo path = getFileInfo path >>= liftIO . putStrLn
 

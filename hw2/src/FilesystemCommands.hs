@@ -34,7 +34,7 @@ makeDirectory path = do
     , directoryContents = []
     , fileParent = Just $ getParentPath $ stringToPath path
     }
-  createFile path directory
+  createFile path directory False
 
 makeFile :: StringPath -> BS.ByteString -> FileSystem ()
 makeFile path text = do
@@ -48,7 +48,7 @@ makeFile path text = do
     , documentSize = BS.length text
     , documentContent = text
     }
-  createFile path file
+  createFile path file False
 
 readFileContents :: StringPath -> FileSystem BS.ByteString
 readFileContents path = do
@@ -102,3 +102,8 @@ findByName rootPath name = do
   root <- getDirectoryByPath rootPath
   return $ Prelude.map (pathToString . filePath) (findInPathByName root name)
   
+
+appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
+appendToFile path text = do
+  file <- getDocumentByPath path
+  createFileOverwriting path (file { documentContent = (documentContent file) <> text })
