@@ -29,6 +29,7 @@ data Command
   | RemoveFile StringPath
   | ReadFile StringPath
   | AppendFile StringPath BS.ByteString
+  | Copy StringPath StringPath
   | PrintInfo StringPath
   | Find StringPath String
 
@@ -73,6 +74,7 @@ parseCommand s =
     "ls" :| [path] -> Right $ ListFiles path
     "mkdir" :| [path] -> Right $ MakeDirectory path
     "rm" :| [path] -> Right $ RemoveFile path
+    "cp" :| from : [to] -> Right $ Copy from to
     "touch" :| path : [text] -> Right $ MakeDocument path $ BS.pack text
     "touch" :| [path] -> Right $ MakeDocument path ""
     "append-file" :| path : [text] -> Right $ AppendFile path $ BS.pack text
@@ -89,6 +91,7 @@ execCommand e =
     MakeDirectory path -> execMkdir path
     MakeDocument path text -> execTouch path text
     RemoveFile path -> execRm path
+    Copy from to -> execCp from to
     ReadFile path -> execReadFile path
     AppendFile path text -> execAppendFile path text
     PrintInfo path -> execPrintInfo path
@@ -112,7 +115,10 @@ execTouch :: StringPath -> BS.ByteString -> FileSystem ()
 execTouch = makeFile
 
 execRm :: StringPath -> FileSystem ()
-execRm = FilesystemCommands.removeFile
+execRm = removeFile
+
+execCp :: StringPath -> StringPath -> FileSystem ()
+execCp = copyFile
 
 execReadFile :: StringPath -> FileSystem ()
 execReadFile path = do

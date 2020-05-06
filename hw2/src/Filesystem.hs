@@ -12,9 +12,9 @@ import Utils
 import Path
 import File
 import Data.Time (UTCTime)
-import System.Directory
 import Control.Applicative ((<|>))
 import Control.Monad.Catch (throwM)
+import System.Directory (emptyPermissions)
 
 type FileSystem a = StateT FSState IO a
 
@@ -55,21 +55,21 @@ toAbsolutePath stringPath = do
             ".." -> getParentPath acc
             s -> acc <:| s
 
-getFileByPath :: StringPath -> FileSystem File
+getFileByPath :: StringPath -> FileSystem (Maybe File)
 getFileByPath stringPath = toAbsolutePath stringPath >>= getFileByAbsolutePath
 
-getFileByAbsolutePath :: Path -> FileSystem File
+getFileByAbsolutePath :: Path -> FileSystem (Maybe File)
 getFileByAbsolutePath path = do
   root <- gets rootDirectory
   case path of
-    ("/" :| []) -> return root
+    ("/" :| []) -> return $ Just root
     ("/" :| remaining) -> getFileByRelativePath (NE.fromList remaining) root
     relativePath -> getFileByRelativePath relativePath root
 
-getFileByRelativePath :: Path -> File -> FileSystem File
+getFileByRelativePath :: Path -> File -> FileSystem (Maybe File)
 getFileByRelativePath _ Document{} = throw DirectoryExpected
 getFileByRelativePath absPath@("/" :| _) _ = getFileByAbsolutePath absPath
-getFileByRelativePath (x :| []) root = moveNext root x
+getFileByRelativePath (x :| []) root = Just <$> moveNext root x
 getFileByRelativePath (x :| next : xs) root = moveNext root x >>= getFileByRelativePath (next :| xs)
 
 moveNext :: File -> String -> FileSystem File
@@ -82,26 +82,24 @@ getDirectoryByPath :: StringPath -> FileSystem File
 getDirectoryByPath path = do
   file <- getFileByPath path
   case file of
-    Directory{} -> return file
-    Document{} -> throwM DirectoryExpected
+    Just dir@Directory{} -> return dir
+    Just Document{} -> throwM DirectoryExpected
+    Nothing -> throwM NoSuchFile
 
 getDocumentByPath :: StringPath -> FileSystem File
 getDocumentByPath path = do
   file <- getFileByPath path
   case file of
-    Document{} -> return file
-    Directory{} -> throwM DocumentExpected
+    Just doc@Document{} -> return doc
+    Just Directory{} -> throwM DocumentExpected
+    Nothing -> throwM NoSuchFile
 
 findInPathByName :: File -> String -> [File]
 findInPathByName root name = do
-  let initial =
-        case findInFolder root name of
-          Just file -> [file]
-          Nothing -> []
+  let initial = (:[]) <$> findInFolder root name `orElse` []
   foldr foldFunc initial (filterDirectories $ directoryContents root)
   where
-    foldFunc dir acc =
-      acc ++ findInPathByName dir name
+    foldFunc dir acc = acc ++ findInPathByName dir name
 
 createFileOverwriting :: StringPath -> File -> FileSystem ()
 createFileOverwriting stringPath newFile = createFile stringPath newFile True
@@ -112,6 +110,41 @@ createFile stringPath newFile overwrite = do
    root <- gets rootDirectory
    newRoot <- createFileRecursively path root newFile overwrite
    updateFileSystemWithNewRoot newRoot
+
+  -- TODO check root
+copyFile :: File -> StringPath -> FileSystem ()
+copyFile file@Document{} targetPath = do
+  targetAbsPath <- toAbsolutePath targetPath
+  let newPath = targetAbsPath <:| (NE.last $ filePath file)
+  root <- gets rootDirectory
+  newRoot <- createFileRecursively newPath root file False
+  updateFileSystemWithNewRoot newRoot
+copyFile file@Directory{} targetPath = do
+  targetAbsPath <- toAbsolutePath targetPath
+  let newPath = targetAbsPath <:| (NE.last $ filePath file)
+  root <- gets rootDirectory
+  newRoot <- createFileRecursively newPath root file False
+  updateFileSystemWithNewRoot newRoot
+  updateFileSystemWithNewRoot $ updateParentsOfDirectoryContent newRoot
+
+updateParentsOfDirectoryContent :: File -> File
+updateParentsOfDirectoryContent dir@Directory{ filePath = path, directoryContents = contents } = 
+  dir { directoryContents = Prelude.map (updateParents path) contents }
+updateParentsOfDirectoryContent dir@Document{} = dir
+
+updateParents :: Path -> File -> File
+updateParents parentPath file@Document{}  =
+  file 
+    { fileParent = Just parentPath
+    , filePath = parentPath <:| (nameByPath . filePath $ file)
+    }
+updateParents parentPath file@Directory{ directoryContents = contents } = do
+  let newPath = parentPath <:| (nameByPath . filePath $ file)
+  file 
+    { fileParent = Just parentPath
+    , filePath = newPath
+    , directoryContents = Prelude.map (updateParents newPath) contents
+    }
 
 createFileRecursively :: Path -> File -> File -> Bool -> FileSystem File
 createFileRecursively ("/" :| []) Directory{} _ _ = throwM CannotCreateRoot
@@ -150,7 +183,7 @@ removeFile :: StringPath -> FileSystem ()
 removeFile stringPath = do
    path <- toAbsolutePath stringPath
    currentDirPath <- filePath <$> gets currentDirectory
-   if currentDirPath `Path.isParentOf` path
+   if path `Path.isParentOf` currentDirPath
      then throwM CannotRemoveParent
      else gets rootDirectory >>= removeFileRecursively path >>= updateFileSystemWithNewRoot
 
@@ -158,10 +191,8 @@ removeFileRecursively :: Path -> File -> FileSystem File
 removeFileRecursively ("/" :| []) Directory{} = throwM CannotRemoveRoot
 removeFileRecursively ("/" :| next) root@Directory{}  =
   removeFileRecursively (NE.fromList next) root 
-removeFileRecursively (name :| []) root@Directory{} = do
-  case findInFolder root name of
-    Just file -> removeFromDirectory root file
-    Nothing -> throwM FileNotFound
+removeFileRecursively (name :| []) root@Directory{} =
+  removeFromDirectory root <$> (findInFolder root name) `orElse` throwM FileNotFound
 removeFileRecursively (name :| next) root@Directory{} =
   case findInFolder root name of
     Just dir@(Directory {}) -> do
@@ -174,7 +205,7 @@ removeFileRecursively _ Document{} = throwM DirectoryExpected
 updateFileSystemWithNewRoot :: File -> FileSystem ()
 updateFileSystemWithNewRoot newRoot = do
   modify (\s -> s { rootDirectory = newRoot })
-  newCurrentDir <- gets currentDirectory >>= getFileByPath . pathToString . filePath
+  newCurrentDir <- gets currentDirectory >>= getDirectoryByPath . pathToString . filePath
   modify (\s -> s { currentDirectory = newCurrentDir })
 
 addToDirectory :: File -> File -> FileSystem File

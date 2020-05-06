@@ -3,6 +3,7 @@
 module Utils where
 
 import Data.List.NonEmpty
+import Data.Maybe (fromMaybe)
 
 -- | Split list of values by given value.
 -- Return non-empty list of lists of stored parts.
@@ -30,3 +31,8 @@ remove contents file = Prelude.filter ((/=) file) contents
 
 update :: Eq a => [a] -> a -> a -> [a]
 update contents file newFile = remove contents file ++ [newFile]
+
+infixl 1 `orElse`
+orElse :: Maybe a -> a -> a
+orElse = flip fromMaybe
+

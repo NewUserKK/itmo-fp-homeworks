@@ -14,6 +14,7 @@ import GHC.Int (Int64)
 import System.Directory (Permissions, emptyPermissions)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import Control.Monad.Catch (throwM)
 
 changeDirectory :: StringPath -> FileSystem ()
 changeDirectory path = do
@@ -53,6 +54,14 @@ makeFile path text = do
 removeFile :: StringPath -> FileSystem ()
 removeFile = Filesystem.removeFile
 
+
+copyFile :: StringPath -> StringPath -> FileSystem ()
+copyFile path targetPath = do
+  file <- getFileByPath path
+  case file of
+    Just f -> Filesystem.copyFile f targetPath
+    Nothing -> throwM NoSuchFile 
+
 appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
 appendToFile path text = do
   file <- getDocumentByPath path
@@ -72,14 +81,14 @@ getFileInfo :: StringPath -> FileSystem String
 getFileInfo path = do
   file <- getFileByPath path
   case file of
-    dir@Directory{} -> do
+    Just dir@Directory{} -> do
       let filepath = pathToString $ filePath dir
       let parentPath = show $ pathToString <$> fileParent dir
       let permissions = filePermissions dir
       let fileCount = Prelude.length $ directoryContents dir
       let size = getFileSize dir
       return $ constructDirectoryInfo filepath parentPath permissions fileCount size
-    doc@Document{} -> do
+    Just doc@Document{} -> do
       let filepath = pathToString $ filePath doc
       let permissions = filePermissions doc
       let extension = extensionFromPath $ filePath doc
@@ -87,6 +96,7 @@ getFileInfo path = do
       let modificationTime = documentUpdateTime doc
       let size = getFileSize doc
       return $ constructDocumentInfo filepath permissions extension creationTime modificationTime size
+    Nothing -> throwM NoSuchFile
 
 constructDirectoryInfo :: StringPath -> StringPath -> Permissions -> Int -> Int64 -> String
 constructDirectoryInfo path parentPath permissions fileCount size =

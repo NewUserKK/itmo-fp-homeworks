@@ -30,3 +30,11 @@ getParentPath list = NE.fromList $ NE.init list
 
 isParentOf :: Path -> Path -> Bool
 isParentOf parent path = (NE.toList parent) `NE.isPrefixOf` path
+
+concatPath :: FilePath -> FilePath -> FilePath
+concatPath "" path = path
+concatPath parentPath "" = parentPath
+concatPath parentPath path = parentPath ++ "/" ++ path
+
+(</>) ::  FilePath -> FilePath -> FilePath
+(</>) = concatPath

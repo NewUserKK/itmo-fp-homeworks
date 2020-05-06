@@ -82,13 +82,3 @@ constructDocument parentPath path = do
     , documentSize = fileSize
     , documentContent = contents
     }
-
-
-concatPath :: FilePath -> FilePath -> FilePath
-concatPath "" path = path
-concatPath parentPath "" = parentPath
-concatPath parentPath path = parentPath ++ "/" ++ path
-
-
-(</>) ::  FilePath -> FilePath -> FilePath
-(</>) = concatPath
