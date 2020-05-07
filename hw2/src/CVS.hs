@@ -7,6 +7,7 @@ import Control.Monad.State
 import Control.Monad.Catch (throwM)
 import Data.Maybe (fromJust, mapMaybe)
 import Data.List (sort)
+import qualified Data.ByteString.Lazy.Char8 as BS
 import Utils (readMaybeInt)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (systemToUTCTime, getSystemTime)
@@ -54,11 +55,10 @@ getCVSRevisionDirOrError :: Path -> FileSystem File
 getCVSRevisionDirOrError path = do
   revDir <- getCVSRevisionDir path
   case revDir of
-    Just Directory{ directoryContents = [] } -> throwM InvalidCVSRevisionDirectory
     Just dir@Directory{} -> return dir
     Just Document{} -> throwM InvalidCVSRevisionDirectory
     Nothing -> throwM FileNotAddedToCVS
-    
+
 createCVSRevisionDir :: Path -> FileSystem ()
 createCVSRevisionDir path = do
   cvsDir <- getCvsForFileOrError path
@@ -92,9 +92,9 @@ getCvsForFileOrError path = do
     Nothing -> throwM CVSDoesNotExist
 
 constructCommitInfoFile :: Path -> String -> UTCTime -> File
-constructCommitInfoFile commitedFilePath comment creationTime = 
+constructCommitInfoFile commitedFilePath comment creationTime =
   (emptyDocument creationTime)
-    { documentContent = (pathToString commitedFilePath) ++ "\n" ++ comment
+    { documentContent = BS.pack $ (pathToString commitedFilePath) ++ "\n" ++ comment
     }
 
 revisionHash :: Path -> FileSystem String

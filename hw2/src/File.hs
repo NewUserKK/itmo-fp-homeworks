@@ -27,7 +27,9 @@ data File
       , documentSize :: Int64
       , documentContent :: BS.ByteString
       }
-  deriving (Eq)
+
+instance Eq File where
+  (==) a b = filePath a == filePath b
 
 instance Show File where
   show = pathToString . filePath

@@ -165,7 +165,10 @@ createFileRecursively path@(name :| next) root@Directory{} newFile overwrite =
       new <- createFileRecursively (NE.fromList next) dir newFile overwrite
       updateFileInDirectory root dir new
     Nothing -> do
-      let newDirectory = emptyDirectory $ (filePath root) <:| name
+      let newDirectory = emptyDirectory {
+          filePath = (filePath root) <:| name
+        , fileParent = Just $ filePath root
+        } 
       updatedRoot <- addToDirectory root newDirectory
       createFileRecursively path updatedRoot newFile overwrite
     Just (Document {}) -> throwM DirectoryExpected
