@@ -80,12 +80,13 @@ getFileInfo path = do
       return $ constructDirectoryInfo filepath parentPath permissions fileCount size
     Just doc@Document{} -> do
       let filepath = pathToString $ filePath doc
+      let parentPath = show $ pathToString <$> fileParent doc
       let permissions = filePermissions doc
       let extension = extensionFromPath $ filePath doc
       let creationTime = documentCreationTime doc
       let modificationTime = documentUpdateTime doc
       let size = getFileSize doc
-      return $ constructDocumentInfo filepath permissions extension creationTime modificationTime size
+      return $ constructDocumentInfo filepath parentPath permissions extension creationTime modificationTime size
     Nothing -> throwM NoSuchFile
 
 constructDirectoryInfo :: StringPath -> StringPath -> Permissions -> Int -> Int64 -> String
@@ -96,9 +97,10 @@ constructDirectoryInfo path parentPath permissions fileCount size =
   "Files: " ++ show fileCount ++ "\n" ++
   "Size: " ++ show size ++ "B"
 
-constructDocumentInfo :: StringPath -> Permissions -> String -> UTCTime -> UTCTime -> Int64 -> String
-constructDocumentInfo path permissions extension creationTime modificationTime size =
+constructDocumentInfo :: StringPath -> StringPath -> Permissions -> String -> UTCTime -> UTCTime -> Int64 -> String
+constructDocumentInfo path parentPath permissions extension creationTime modificationTime size =
   "Path: " ++ path ++ "\n" ++
+  "Parent: " ++ parentPath ++ "\n" ++
   "Permissions: " ++ show permissions ++ "\n" ++
   "File type: " ++ extension ++ "\n" ++
   "Created at: " ++ show creationTime ++ "\n" ++

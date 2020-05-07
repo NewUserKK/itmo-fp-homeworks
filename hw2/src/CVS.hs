@@ -1,19 +1,19 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
 
 module CVS where
 
 import Control.Monad.Catch (throwM)
 import Control.Monad.State
 import Data.Aeson
+import Data.Algorithm.Diff (Diff, PolyDiff(..), getGroupedDiff)
 import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.Maybe (fromJust, mapMaybe, catMaybes)
+import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import File
 import Filesystem
 import GHC.Generics
 import Path
-import Utils (readMaybeInt)
 
 data CommitInfo =
   CommitInfo
@@ -29,6 +29,11 @@ instance ToJSON CommitInfo
 instance Show CommitInfo where
   show info = (show $ commitIndex info) ++ ". " ++ (commitMessage info)
 
+data MergeStrategy
+  = MergeLeft
+  | MergeRight
+  | MergeBoth
+
 commitInfoFileName :: String
 commitInfoFileName = "COMMIT_INFO"
 
@@ -43,29 +48,30 @@ cvsInit path = do
     Just cvs -> throwM $ CVSAlreadyExists (pathToString $ filePath cvs)
     Nothing -> createFileByName path cvsFileName emptyDirectory False
 
-cvsAdd :: Path -> FileSystem ()
+cvsAdd :: Path -> FileSystem File
 cvsAdd path = getFileByPathOrError path >>= cvsAddFile
 
-cvsAddFile :: File -> FileSystem ()
+cvsAddFile :: File -> FileSystem File
 cvsAddFile file@Document{ filePath = path } = do
   createCVSRevisionDir path
   createNewRevision path 0 file "Initial revision"
-cvsAddFile dir@Directory{} =
+cvsAddFile dir@Directory{} = do
   foldr ((>>) . cvsAddFile) (return ()) (getAllFilesInSubDirectories dir)
+  return emptyDirectory
 
-cvsUpdate :: Path -> String -> FileSystem ()
-cvsUpdate path comment = getFileByPathOrError path >>= cvsUpdateFile comment
+cvsUpdate :: Path -> String -> FileSystem File
+cvsUpdate path comment = getFileByPathOrError path >>= flip cvsUpdateFile comment
 
-cvsUpdateFile :: String -> File -> FileSystem ()
-cvsUpdateFile comment file@Document{ filePath = path } = do
+cvsUpdateFile :: File -> String -> FileSystem File
+cvsUpdateFile file@Document{ filePath = path } comment = do
   newRevIndex <- (+1) <$> getLatestRevisionIndex path
   createNewRevision path newRevIndex file comment
-cvsUpdateFile _ Directory{} = throwM DocumentExpected
+cvsUpdateFile Directory{} _ = throwM DocumentExpected
 
-createNewRevision :: Path -> Int -> File -> String -> FileSystem ()
+createNewRevision :: Path -> Int -> File -> String -> FileSystem File
 createNewRevision filepath index file comment = do
   absPath <- toAbsoluteFSPath filepath
-  cvsRevDir <- getCVSRevisionDirOrError absPath
+  cvsRevDir <- getRevisionDirOrError absPath
   newRevDir <- createFileByName (filePath cvsRevDir) (show index) emptyDirectory False
   time <- liftIO $ systemToUTCTime <$> getSystemTime
   _ <- createFileByName
@@ -74,19 +80,20 @@ createNewRevision filepath index file comment = do
     (constructCommitInfoFile absPath index comment time)
     True
   copyFile file (filePath newRevDir)
+  getDirectoryByPath (filePath newRevDir)
 
 createCVSRevisionDir :: Path -> FileSystem ()
 createCVSRevisionDir path = do
   cvsDir <- getCVSForFileOrError path
   hash <- revisionHash path
-  maybeRevDir <- getCVSRevisionDir path
+  maybeRevDir <- getRevisionDir path
   case maybeRevDir of
     Nothing -> void $ createFileByName (filePath cvsDir) hash emptyDirectory False
     Just _ -> return ()
 
 getCVSRevision :: Path -> Int -> FileSystem (Maybe File)
 getCVSRevision path index = do
-  cvsDir <- getCVSRevisionDirOrError path
+  cvsDir <- getRevisionDirOrError path
   return $ findInFolder cvsDir (show index)
 
 getCVSRevisionOrError :: Path -> Int -> FileSystem File
@@ -98,7 +105,7 @@ getCVSRevisionOrError path index = do
 
 removeFromCVS :: Path -> FileSystem ()
 removeFromCVS path = do
-  cvsDir <- getCVSRevisionDirOrError path
+  cvsDir <- getRevisionDirOrError path
   removeFile $ filePath cvsDir
 
 removeRevision :: Path -> Int -> FileSystem ()
@@ -106,15 +113,15 @@ removeRevision path index = do
   revision <- getCVSRevisionOrError path index
   removeFile $ filePath revision
 
-getCVSRevisionDir :: Path -> FileSystem (Maybe File)
-getCVSRevisionDir path = do
+getRevisionDir :: Path -> FileSystem (Maybe File)
+getRevisionDir path = do
   cvsDir <- getCVSForFileOrError path
   hash <- revisionHash path
   return $ findInFolder cvsDir hash
 
-getCVSRevisionDirOrError :: Path -> FileSystem File
-getCVSRevisionDirOrError path = do
-  revDir <- getCVSRevisionDir path
+getRevisionDirOrError :: Path -> FileSystem File
+getRevisionDirOrError path = do
+  revDir <- getRevisionDir path
   case revDir of
     Just dir@Directory{} -> return dir
     Just Document{} -> throwM InvalidCVSRevisionDirectory
@@ -145,7 +152,7 @@ getCVSForFileOrError path = do
 
 getLatestRevisionIndex :: Path -> FileSystem Int
 getLatestRevisionIndex path = do
-  revDir <- getCVSRevisionDirOrError path
+  revDir <- getRevisionDirOrError path
   let revisions = mapMaybe (readMaybeInt . fileName) (directoryContents revDir)
   if (null revisions)
     then return (-1)
@@ -160,7 +167,7 @@ getAllRevisionsOfDirectory Document{} = throwM DirectoryExpected
 
 getAllRevisionsOfDocument :: File -> FileSystem [File]
 getAllRevisionsOfDocument path =
-  getCVSRevisionDirOrError (filePath path) >>=
+  getRevisionDirOrError (filePath path) >>=
   return . directoryContents
 
 getCommitInfo :: File -> FileSystem CommitInfo
@@ -190,18 +197,54 @@ constructCommitInfoFile committedFilePath index comment creationTime = do
     { documentContent = serializeCommitInfo commitInfo
     }
 
+mergeRevisions :: File -> File -> MergeStrategy -> FileSystem File
+mergeRevisions revision1 revision2 strategy = do
+  content1 <- BS.lines . documentContent <$> getFileFromRevisionDir revision1
+  content2 <- BS.lines . documentContent <$> getFileFromRevisionDir revision2
+  let diff = getGroupedDiff content1 content2
+  let newLines =
+        case strategy of
+          MergeLeft -> content1
+          MergeRight -> content2
+          MergeBoth -> mergeBoth diff
+  let newContent = BS.intercalate "\n" newLines
+
+  path <- getCommitInfo revision2 >>= return . commitRealFilePath
+  revIndex1 <- getCommitInfo revision1 >>= return . commitIndex
+  revIndex2 <- getCommitInfo revision2 >>= return . commitIndex
+  let comment = "Merge revisions " ++ show revIndex1 ++ " and " ++ show revIndex2
+  newRevDir <- cvsUpdate path comment
+  newFile <- getFileFromRevisionDir newRevDir
+  let newPath = filePath newFile
+  _ <- createFile newPath newFile{ documentContent = newContent } True
+  let fsFile = newFile {
+      filePath = path
+    , fileParent = Just $ getParentPath path
+    , documentContent = newContent
+  }
+  _ <- createFile path fsFile True
+
+  getDirectoryByPath $ filePath newRevDir
+
+mergeBoth :: [Diff [BS.ByteString]] -> [BS.ByteString]
+mergeBoth diff = concatMap mergeFunc diff
+  where
+    mergeFunc (First a) = a
+    mergeFunc (Both a _) = a
+    mergeFunc (Second b) = b
+
 filterAddedToCvs :: [File] -> FileSystem [File]
 filterAddedToCvs list = catMaybes <$> traverse mapFunc list
   where
     mapFunc file = do
-      dir <- getCVSRevisionDir $ filePath file
+      dir <- getRevisionDir $ filePath file
       return $ (file <$ dir)
 
 revisionHash :: Path -> FileSystem String
 revisionHash path = toAbsoluteFSPath path >>= return . pathHash
 
 deserializeCommitInfo :: BS.ByteString -> FileSystem CommitInfo
-deserializeCommitInfo content = 
+deserializeCommitInfo content =
   case eitherDecode content of
     Right info -> return info
     Left _ -> throwM MalformedCommitInfo

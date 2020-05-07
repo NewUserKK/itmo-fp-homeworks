@@ -17,7 +17,7 @@ import Utils
 import Path
 import File
 import Data.List (intercalate)
-import CVS (CommitInfo, commitRealFilePath)
+import CVS (CommitInfo, MergeStrategy(..), commitRealFilePath)
 
 data Arguments =
   Arguments
@@ -42,10 +42,12 @@ data Command
   | CVSShow StringPath Int
   | CVSRemove StringPath
   | CVSRemoveRevision StringPath Int
+  | CVSMergeRevisions StringPath Int Int MergeStrategy
 
 data UnknownCommandError
   = UnknownCommandError String
-  | IntParseError
+  | IntParseError String
+  | UnknownMergeStrategy String
   deriving (Show)
 
 main :: IO ()
@@ -97,15 +99,17 @@ parseCommand s =
     "cvs" :| "add" : [path] -> Right $ CVSAdd path
     "cvs" :| "update" : path : [comment] -> Right $ CVSUpdate path comment
     "cvs" :| "history" : [path] -> Right $ CVSHistory path
-    "cvs" :| "show" : path : [index] ->
-      case readMaybeInt index of
-        Just i -> Right $ CVSShow path i
-        Nothing -> Left IntParseError
-    "cvs" :| "rm-rev" : path : [index] ->
-      case readMaybeInt index of
-        Just i -> Right $ CVSRemoveRevision path i
-        Nothing -> Left IntParseError
+    "cvs" :| "show" : path : [index] -> tryParse index >>= return . (CVSShow path)
+    "cvs" :| "rm-rev" : path : [index] -> tryParse index >>= return . (CVSRemoveRevision path)
     "cvs" :| "rm" : [path] -> Right $ CVSRemove path
+    "cvs" :| "merge" : path : index1 : index2 : [strategy] -> do
+      i1 <- tryParse index1
+      i2 <- tryParse index2
+      case strategy of
+        "left" -> Right $ CVSMergeRevisions path i1 i2 MergeLeft
+        "right" -> Right $ CVSMergeRevisions path i1 i2 MergeRight
+        "both" -> Right $ CVSMergeRevisions path i1 i2 MergeBoth
+        _ -> Left $ UnknownMergeStrategy strategy
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -128,7 +132,8 @@ execCommand e =
     CVSShow path index -> execCvsShow path index
     CVSRemove path -> execCvsRemove path 
     CVSRemoveRevision path index -> execCvsRemoveRevision path index
-  
+    CVSMergeRevisions path i1 i2 strategy -> execCvsMerge path i1 i2 strategy
+    
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
 
@@ -204,6 +209,10 @@ execCvsRemoveRevision path index = do
   cvsRemoveRevision path index
   liftIO $ putStrLn $ "Removed revision " ++ show index ++ " of " ++ path ++ " from CVS"
 
+execCvsMerge :: StringPath -> Int -> Int -> MergeStrategy -> FileSystem ()
+execCvsMerge path index1 index2 strategy = do
+  _ <- cvsMergeRevisions path index1 index2 strategy
+  liftIO $ putStrLn "Created new file revision"
 
 getRevisionsMessageForDocument :: [CommitInfo] -> String
 getRevisionsMessageForDocument [] = "No history"
@@ -216,3 +225,9 @@ printCommandExecutionError e = liftIO $ print e
 
 printError :: UnknownCommandError -> FileSystem ()
 printError err = liftIO $ putStrLn $ "Wrong command: " ++ show err
+
+tryParse :: String -> Either UnknownCommandError Int
+tryParse s =
+  case readMaybeInt s of
+    Just i -> Right i
+    Nothing -> Left $ IntParseError s

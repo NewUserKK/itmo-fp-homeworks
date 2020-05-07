@@ -2,7 +2,7 @@
 
 module Utils where
 
-import Data.List.NonEmpty
+import Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 

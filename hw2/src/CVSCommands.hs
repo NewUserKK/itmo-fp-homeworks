@@ -6,15 +6,16 @@ import Path
 import File
 import qualified Data.ByteString.Lazy as BS
 import Control.Monad.Catch (throwM)
+import Control.Monad (void)
 
 cvsInit :: StringPath -> FileSystem File
 cvsInit = CVS.cvsInit . stringToPath
     
 cvsAdd :: StringPath -> FileSystem ()
-cvsAdd = CVS.cvsAdd . stringToPath
+cvsAdd = void . CVS.cvsAdd . stringToPath
 
 cvsUpdate :: StringPath -> String -> FileSystem ()
-cvsUpdate = CVS.cvsUpdate . stringToPath
+cvsUpdate path comment = void $ CVS.cvsUpdate (stringToPath path) comment
 
 cvsHistoryForDocument :: File -> FileSystem [CommitInfo]
 cvsHistoryForDocument doc@Document{} =
@@ -39,3 +40,10 @@ cvsRemove = removeFromCVS . stringToPath
 
 cvsRemoveRevision :: StringPath -> Int -> FileSystem ()
 cvsRemoveRevision = removeRevision . stringToPath
+
+cvsMergeRevisions :: StringPath -> Int -> Int -> MergeStrategy -> FileSystem File
+cvsMergeRevisions stringPath index1 index2 strategy = do
+  let path = stringToPath stringPath
+  revision1 <- getCVSRevisionOrError path index1
+  revision2 <- getCVSRevisionOrError path index2
+  mergeRevisions revision1 revision2 strategy
