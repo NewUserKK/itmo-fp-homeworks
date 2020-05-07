@@ -7,7 +7,7 @@ import Control.Monad.Catch
 import Control.Monad.State
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE
-import Filesystem (FileSystem, FSState(..), CommandExecutionError)
+import Filesystem (FileSystem, FSState(..), CommandExecutionError, toAbsoluteFSPath, getFileByPathOrError)
 import FilesystemCommands
 import CVSCommands
 import FilesystemLoader
@@ -17,6 +17,7 @@ import Utils
 import Path
 import File
 import Data.List (intercalate)
+import CVS (CommitInfo, commitRealFilePath)
 
 data Arguments =
   Arguments
@@ -160,10 +161,23 @@ execCvsUpdate :: StringPath -> String -> FileSystem ()
 execCvsUpdate = cvsUpdate
 
 execCvsHistory :: StringPath -> FileSystem ()
-execCvsHistory path = do
-  history <- cvsHistory path
-  liftIO $ putStrLn $ "Commit history for " ++ path
-  liftIO $ putStrLn $ intercalate "\n" (Prelude.map show history)
+execCvsHistory stringPath = do
+  path <- toAbsoluteFSPath $ stringToPath stringPath
+  file <- getFileByPathOrError path
+  case file of
+    Document{} -> do
+      message <- getRevisionsMessageForDocument <$> cvsHistoryForDocument file
+      liftIO $ putStrLn message
+    Directory{} -> do
+      history <- cvsHistoryForDirectory file
+      liftIO $ putStrLn $ "Commit history for directory " ++ stringPath
+      liftIO $ putStrLn $ intercalate "\n" (Prelude.map getRevisionsMessageForDocument history)
+
+getRevisionsMessageForDocument :: [CommitInfo] -> String
+getRevisionsMessageForDocument [] = "No history"
+getRevisionsMessageForDocument revisions = do
+  let path = pathToString $ commitRealFilePath (Prelude.head revisions)
+  "Commit history for file" ++ path ++ "\n" ++ intercalate "\n" (Prelude.map show revisions)
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

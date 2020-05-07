@@ -113,7 +113,12 @@ createFile path newFile overwrite = do
     Just file -> return file
     Nothing -> throwM FailedToCreateFile
 
-  -- TODO check root
+getAllFilesInSubDirectories :: File -> [File]
+getAllFilesInSubDirectories doc@Document{} = [doc]
+getAllFilesInSubDirectories Directory{ directoryContents = contents } =
+  concatMap getAllFilesInSubDirectories contents
+
+-- todo: check root
 copyFile :: File -> Path -> FileSystem ()
 copyFile file targetPath = do
   targetAbsPath <- toAbsoluteFSPath targetPath

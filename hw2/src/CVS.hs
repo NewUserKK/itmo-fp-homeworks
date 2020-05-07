@@ -6,7 +6,7 @@ import Control.Monad.Catch (throwM)
 import Control.Monad.State
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.Maybe (fromJust, mapMaybe)
+import Data.Maybe (fromJust, mapMaybe, catMaybes)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import File
@@ -18,7 +18,7 @@ import Utils (readMaybeInt)
 data CommitInfo =
   CommitInfo
     { commitIndex :: Int
-    , commitPath :: Path
+    , commitRealFilePath :: Path
     , commitMessage :: String
     }
   deriving (Generic)
@@ -50,12 +50,12 @@ cvsAddFile :: File -> FileSystem ()
 cvsAddFile file@Document{ filePath = path } = do
   createCVSRevisionDir path
   createNewRevision path 0 file "Initial revision"
-cvsAddFile Directory{ directoryContents = contents } =
-  foldr ((>>) . cvsAddFile) (return ()) contents
+cvsAddFile dir@Directory{} =
+  foldr ((>>) . cvsAddFile) (return ()) (getAllFilesInSubDirectories dir)
 
 cvsUpdate :: Path -> String -> FileSystem ()
 cvsUpdate path comment = getFileByPathOrError path >>= cvsUpdateFile comment
-  
+
 cvsUpdateFile :: String -> File -> FileSystem ()
 cvsUpdateFile comment file@Document{ filePath = path } = do
   newRevIndex <- (+1) <$> getLatestRevisionIndex path
@@ -131,8 +131,17 @@ getLatestRevisionIndex path = do
   revDir <- getCVSRevisionDirOrError path
   return $ maximum $ mapMaybe (readMaybeInt . fileName) (directoryContents revDir)
 
-getAllRevisionsOfFile :: Path -> FileSystem [File]
-getAllRevisionsOfFile path = getCVSRevisionDirOrError path >>= return . directoryContents
+getAllRevisionsOfDirectory :: File -> FileSystem [[File]]
+getAllRevisionsOfDirectory dir@Directory{} = do
+  addedToCvs <- filterAddedToCvs $ getAllFilesInSubDirectories dir
+  liftIO $ print addedToCvs
+  traverse getAllRevisionsOfDocument addedToCvs
+getAllRevisionsOfDirectory Document{} = throwM DirectoryExpected
+
+getAllRevisionsOfDocument :: File -> FileSystem [File]
+getAllRevisionsOfDocument path =
+  getCVSRevisionDirOrError (filePath path) >>=
+  return . directoryContents
 
 getCommitInfoFromRevisionDir :: File -> FileSystem CommitInfo
 getCommitInfoFromRevisionDir dir = do
@@ -145,13 +154,20 @@ constructCommitInfoFile :: Path -> Int -> String -> UTCTime -> File
 constructCommitInfoFile committedFilePath index comment creationTime = do
   let commitInfo = CommitInfo {
       commitIndex = index
-    , commitPath = committedFilePath
+    , commitRealFilePath = committedFilePath
     , commitMessage = comment
     }
   (emptyDocument creationTime)
     { documentContent = serializeCommitInfo commitInfo
     }
 
+filterAddedToCvs :: [File] -> FileSystem [File]
+filterAddedToCvs list = catMaybes <$> traverse mapFunc list
+  where 
+    mapFunc file = do
+      dir <- getCVSRevisionDir $ filePath file
+      return $ (file <$ dir)
+      
 revisionHash :: Path -> FileSystem String
 revisionHash path = toAbsoluteFSPath path >>= return . pathHash
 
