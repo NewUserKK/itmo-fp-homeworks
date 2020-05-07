@@ -39,9 +39,11 @@ data Command
   | CVSAdd StringPath
   | CVSUpdate StringPath String
   | CVSHistory StringPath
+  | CVSShow StringPath Int
 
 data UnknownCommandError
   = UnknownCommandError String
+  | IntParseError
   deriving (Show)
 
 main :: IO ()
@@ -93,6 +95,10 @@ parseCommand s =
     "cvs" :| "add" : [path] -> Right $ CVSAdd path
     "cvs" :| "update" : path : [comment] -> Right $ CVSUpdate path comment
     "cvs" :| "history" : [path] -> Right $ CVSHistory path
+    "cvs" :| "show" : path : [index] ->
+      case readMaybeInt index of
+        Just i -> Right $ CVSShow path i
+        Nothing -> Left IntParseError
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -112,6 +118,7 @@ execCommand e =
     CVSAdd path -> execCvsAdd path
     CVSUpdate path comment -> execCvsUpdate path comment
     CVSHistory path -> execCvsHistory path
+    CVSShow path index -> execCvsShow path index
 
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
@@ -172,6 +179,11 @@ execCvsHistory stringPath = do
       history <- cvsHistoryForDirectory file
       liftIO $ putStrLn $ "Commit history for directory " ++ stringPath
       liftIO $ putStrLn $ intercalate "\n" (Prelude.map getRevisionsMessageForDocument history)
+
+execCvsShow :: StringPath -> Int -> FileSystem ()
+execCvsShow path index = do
+  contents <- cvsShow path index
+  liftIO $ BS.putStrLn contents
 
 getRevisionsMessageForDocument :: [CommitInfo] -> String
 getRevisionsMessageForDocument [] = "No history"

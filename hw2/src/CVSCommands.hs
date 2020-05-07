@@ -4,6 +4,7 @@ import Filesystem
 import CVS
 import Path
 import File
+import qualified Data.ByteString.Lazy as BS
 import Control.Monad.Catch (throwM)
 
 cvsInit :: StringPath -> FileSystem File
@@ -16,12 +17,22 @@ cvsUpdate :: StringPath -> String -> FileSystem ()
 cvsUpdate = CVS.cvsUpdate . stringToPath
 
 cvsHistoryForDocument :: File -> FileSystem [CommitInfo]
-cvsHistoryForDocument doc@Document{} = 
-  traverse getCommitInfoFromRevisionDir =<< getAllRevisionsOfDocument doc
+cvsHistoryForDocument doc@Document{} =
+  traverse getCommitInfo =<< getAllRevisionsOfDocument doc
 cvsHistoryForDocument Directory{} = throwM DocumentExpected
 
 cvsHistoryForDirectory :: File -> FileSystem [[CommitInfo]]
 cvsHistoryForDirectory dir@Directory{} = do
   revisions <- getAllRevisionsOfDirectory dir
-  traverse (traverse getCommitInfoFromRevisionDir) revisions
+  traverse (traverse getCommitInfo) revisions
 cvsHistoryForDirectory Document{} = throwM DirectoryExpected
+
+cvsShow :: StringPath -> Int -> FileSystem BS.ByteString
+cvsShow stringPath index = do
+  let path = stringToPath stringPath
+  maybeRevision <- getCVSRevision path index
+  case maybeRevision of
+    Just revision -> do
+      file <- getFileFromRevisionDir revision
+      return $ documentContent file
+    Nothing -> throwM UnknownRevision

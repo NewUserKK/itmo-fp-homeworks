@@ -38,7 +38,7 @@ cvsFileName = ".cvs"
 
 cvsInit :: Path -> FileSystem File
 cvsInit path = do
-  existing <- getCvsForFile path
+  existing <- getCVSForFile path
   case existing of
     Just cvs -> throwM $ CVSAlreadyExists (pathToString $ filePath cvs)
     Nothing -> createFileByName path cvsFileName emptyDirectory False
@@ -77,7 +77,7 @@ createNewRevision filepath index file comment = do
 
 createCVSRevisionDir :: Path -> FileSystem ()
 createCVSRevisionDir path = do
-  cvsDir <- getCvsForFileOrError path
+  cvsDir <- getCVSForFileOrError path
   hash <- revisionHash path
   maybeRevDir <- getCVSRevisionDir path
   case maybeRevDir of
@@ -91,7 +91,7 @@ getCVSRevision path index = do
 
 getCVSRevisionDir :: Path -> FileSystem (Maybe File)
 getCVSRevisionDir path = do
-  cvsDir <- getCvsForFileOrError path
+  cvsDir <- getCVSForFileOrError path
   hash <- revisionHash path
   return $ findInFolder cvsDir hash
 
@@ -103,8 +103,8 @@ getCVSRevisionDirOrError path = do
     Just Document{} -> throwM InvalidCVSRevisionDirectory
     Nothing -> throwM FileNotAddedToCVS
 
-getCvsForFile :: Path -> FileSystem (Maybe File)
-getCvsForFile path = do
+getCVSForFile :: Path -> FileSystem (Maybe File)
+getCVSForFile path = do
   file <- getFileByPath path
   dir <- case file of
     Just Document{ fileParent = parent } -> getDirectoryByPath (fromJust parent)
@@ -115,12 +115,12 @@ getCvsForFile path = do
     Just Document{} -> throwM InvalidCVSRepository
     Nothing ->
       case (fileParent dir) of
-        Just parent -> getCvsForFile parent
+        Just parent -> getCVSForFile parent
         Nothing -> return Nothing
 
-getCvsForFileOrError :: Path -> FileSystem File
-getCvsForFileOrError path = do
-  maybeCvs <- getCvsForFile path
+getCVSForFileOrError :: Path -> FileSystem File
+getCVSForFileOrError path = do
+  maybeCvs <- getCVSForFile path
   case maybeCvs of
     Just cvs@Directory{} -> return cvs
     Just Document{} -> throwM InvalidCVSRevisionDirectory
@@ -143,10 +143,19 @@ getAllRevisionsOfDocument path =
   getCVSRevisionDirOrError (filePath path) >>=
   return . directoryContents
 
-getCommitInfoFromRevisionDir :: File -> FileSystem CommitInfo
-getCommitInfoFromRevisionDir dir = do
-  case findInFolder dir commitInfoFileName of
+getCommitInfo :: File -> FileSystem CommitInfo
+getCommitInfo revisionDir = do
+  case findInFolder revisionDir commitInfoFileName of
     Just info@Document{} -> deserializeCommitInfo (documentContent info)
+    Just Directory{} -> throwM InvalidCVSRevisionDirectory
+    Nothing -> throwM InvalidCVSRevisionDirectory
+
+getFileFromRevisionDir :: File -> FileSystem File
+getFileFromRevisionDir revisionDir = do
+  realPath <- commitRealFilePath <$> getCommitInfo revisionDir
+  let name = nameByPath realPath
+  case findInFolder revisionDir name of
+    Just doc@Document{} -> return doc
     Just Directory{} -> throwM InvalidCVSRevisionDirectory
     Nothing -> throwM InvalidCVSRevisionDirectory
 
@@ -163,11 +172,11 @@ constructCommitInfoFile committedFilePath index comment creationTime = do
 
 filterAddedToCvs :: [File] -> FileSystem [File]
 filterAddedToCvs list = catMaybes <$> traverse mapFunc list
-  where 
+  where
     mapFunc file = do
       dir <- getCVSRevisionDir $ filePath file
       return $ (file <$ dir)
-      
+
 revisionHash :: Path -> FileSystem String
 revisionHash path = toAbsoluteFSPath path >>= return . pathHash
 

@@ -36,6 +36,7 @@ data CommandExecutionError
   | InvalidCVSRevisionDirectory
   | FileNotAddedToCVS
   | MalformedCommitInfo
+  | UnknownRevision
   deriving (Show, Exception)
 
 
