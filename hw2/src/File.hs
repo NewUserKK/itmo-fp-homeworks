@@ -51,9 +51,9 @@ emptyDirectory path = Directory {
   , directoryContents = []
   , fileParent = Just $ getParentPath path
   }
-  
+
 emptyDocument :: Path -> UTCTime -> File
-emptyDocument path creationTime = Document 
+emptyDocument path creationTime = Document
   { filePath = path
   , filePermissions = defaultPermissions
   , fileParent = Nothing
@@ -62,7 +62,7 @@ emptyDocument path creationTime = Document
   , documentSize = 0
   , documentContent = ""
   }
-  
+
 defaultPermissions :: Permissions
 defaultPermissions = emptyPermissions {
   readable = True,

@@ -20,6 +20,7 @@ extra-deps:
 - bytestring-0.10.8.2
 - time-1.8.0.2
 - Diff-0.4.0
+- SHA-1.6.4.4
 
 flags: {}
 

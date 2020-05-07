@@ -11,3 +11,6 @@ cvsInit stringPath = do
   created <- CVS.cvsInit (stringToPath stringPath)
   liftIO $ putStrLn $
     "Initialized empty CVS repository at " ++ (pathToString . filePath $ created)
+    
+cvsAdd :: StringPath -> FileSystem ()
+cvsAdd = CVS.cvsAdd . stringToPath

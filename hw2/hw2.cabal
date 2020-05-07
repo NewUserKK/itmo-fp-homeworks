@@ -35,6 +35,7 @@ library
                      , bytestring
                      , time
                      , Diff
+                     , SHA
   default-language:    Haskell2010
 
 executable hw2

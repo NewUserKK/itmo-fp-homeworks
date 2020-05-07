@@ -34,6 +34,7 @@ data Command
   | PrintInfo StringPath
   | Find StringPath String
   | CVSInit StringPath
+  | CVSAdd StringPath
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -85,6 +86,7 @@ parseCommand s =
     "find" :| path : [name] -> Right $ Find path name
     "cvs" :| ["init"] -> Right $ CVSInit "."
     "cvs" :| "init" : [path] -> Right $ CVSInit path
+    "cvs" :| "add" : [path] -> Right $ CVSAdd path
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -101,6 +103,7 @@ execCommand e =
     PrintInfo path -> execPrintInfo path
     Find path name -> execFind path name
     CVSInit path -> execCvsInit path
+    CVSAdd path -> execCvsAdd path
 
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
@@ -140,6 +143,9 @@ execFind path name = do
 
 execCvsInit :: StringPath -> FileSystem ()
 execCvsInit = cvsInit
+
+execCvsAdd :: StringPath -> FileSystem ()
+execCvsAdd = cvsAdd
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

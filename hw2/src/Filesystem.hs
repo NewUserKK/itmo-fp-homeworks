@@ -30,29 +30,20 @@ data CommandExecutionError
   | CannotCreateRoot
   | CannotRemoveRoot
   | CannotRemoveParent
+  | CvsExists StringPath
+  | CvsDoesNotExist
+  | InvalidCvsFolder
   deriving (Show, Exception)
 
 
-toAbsolutePath :: Path -> FileSystem Path
-toAbsolutePath path = do
-  fsRoot <- gets rootDirectory
-  currentDir <- gets currentDirectory
-  return $ case path of
-    "/":|[] -> stringToPath "/"
-    "/":|cs -> _toAbsolutePath (NE.fromList cs) fsRoot
-    _ -> _toAbsolutePath path currentDir
-  where
-    _toAbsolutePath :: Path -> File -> Path
-    _toAbsolutePath path' root = foldl foldFunc (filePath root) path'
-      where
-        foldFunc acc dir =
-          case dir of
-            "." -> acc
-            ".." -> getParentPath acc
-            s -> acc <:| s
+toAbsoluteFSPath :: Path -> FileSystem Path
+toAbsoluteFSPath path = do
+  fsRoot <- filePath <$> gets rootDirectory
+  currentDir <- filePath <$> gets currentDirectory
+  return $ toAbsolutePath path fsRoot currentDir
 
 getFileByPath :: Path -> FileSystem (Maybe File)
-getFileByPath path = toAbsolutePath path >>= getFileByAbsolutePath
+getFileByPath path = toAbsoluteFSPath path >>= getFileByAbsolutePath
 
 getFileByAbsolutePath :: Path -> FileSystem (Maybe File)
 getFileByAbsolutePath path = do
@@ -103,7 +94,7 @@ createFileByName parentPath name file overwrite =
 
 createFile :: Path -> File -> Bool -> FileSystem File
 createFile path newFile overwrite = do
-  absPath <- toAbsolutePath path
+  absPath <- toAbsoluteFSPath path
   root <- gets rootDirectory
   newRoot <- createFileRecursively absPath root newFile overwrite
   updateFileSystemWithNewRoot newRoot
@@ -115,7 +106,7 @@ createFile path newFile overwrite = do
   -- TODO check root
 copyFile :: File -> Path -> FileSystem ()
 copyFile file targetPath = do
-  targetAbsPath <- toAbsolutePath targetPath
+  targetAbsPath <- toAbsoluteFSPath targetPath
   let newPath = targetAbsPath <:| (NE.last $ filePath file)
   root <- gets rootDirectory
   newRoot <- createFileRecursively newPath root file False
@@ -125,19 +116,19 @@ copyFile file targetPath = do
     Document{} -> return ()
 
 updateParentsOfDirectoryContent :: File -> File
-updateParentsOfDirectoryContent dir@Directory{ filePath = path, directoryContents = contents } = 
+updateParentsOfDirectoryContent dir@Directory{ filePath = path, directoryContents = contents } =
   dir { directoryContents = Prelude.map (updateParents path) contents }
 updateParentsOfDirectoryContent dir@Document{} = dir
 
 updateParents :: Path -> File -> File
 updateParents parentPath file@Document{}  =
-  file 
+  file
     { fileParent = Just parentPath
     , filePath = parentPath <:| (nameByPath . filePath $ file)
     }
 updateParents parentPath file@Directory{ directoryContents = contents } = do
   let newPath = parentPath <:| (nameByPath . filePath $ file)
-  file 
+  file
     { fileParent = Just parentPath
     , filePath = newPath
     , directoryContents = Prelude.map (updateParents newPath) contents
@@ -173,7 +164,7 @@ createFileRecursively _ Document{} _ _ = throwM DirectoryExpected
 
 removeFile :: Path -> FileSystem ()
 removeFile path = do
-   absPath <- toAbsolutePath path
+   absPath <- toAbsoluteFSPath path
    currentDirPath <- filePath <$> gets currentDirectory
    if absPath `Path.isParentOf` currentDirPath
      then throwM CannotRemoveParent
