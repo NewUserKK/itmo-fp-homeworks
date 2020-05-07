@@ -29,24 +29,38 @@ instance ToJSON CommitInfo
 instance Show CommitInfo where
   show info = (show $ commitIndex info) ++ ". " ++ (commitMessage info)
 
+commitInfoFileName :: String
+commitInfoFileName = "COMMIT_INFO"
+
+cvsFileName :: String
+cvsFileName = ".cvs"
+
+
 cvsInit :: Path -> FileSystem File
 cvsInit path = do
   existing <- getCvsForFile path
   case existing of
     Just cvs -> throwM $ CVSAlreadyExists (pathToString $ filePath cvs)
-    Nothing -> createFileByName path ".cvs" emptyDirectory False
+    Nothing -> createFileByName path cvsFileName emptyDirectory False
 
 cvsAdd :: Path -> FileSystem ()
-cvsAdd path = do
-  file <- getFileByPathOrError path
+cvsAdd path = getFileByPathOrError path >>= cvsAddFile
+
+cvsAddFile :: File -> FileSystem ()
+cvsAddFile file@Document{ filePath = path } = do
   createCVSRevisionDir path
   createNewRevision path 0 file "Initial revision"
+cvsAddFile Directory{ directoryContents = contents } =
+  foldr ((>>) . cvsAddFile) (return ()) contents
 
 cvsUpdate :: Path -> String -> FileSystem ()
-cvsUpdate path comment = do
-  file <- getFileByPathOrError path
+cvsUpdate path comment = getFileByPathOrError path >>= cvsUpdateFile comment
+  
+cvsUpdateFile :: String -> File -> FileSystem ()
+cvsUpdateFile comment file@Document{ filePath = path } = do
   newRevIndex <- (+1) <$> getLatestRevisionIndex path
   createNewRevision path newRevIndex file comment
+cvsUpdateFile _ Directory{} = throwM DocumentExpected
 
 createNewRevision :: Path -> Int -> File -> String -> FileSystem ()
 createNewRevision filepath index file comment = do
@@ -56,7 +70,7 @@ createNewRevision filepath index file comment = do
   time <- liftIO $ systemToUTCTime <$> getSystemTime
   _ <- createFileByName
     (filePath newRevDir)
-    "COMMIT_INFO"
+    commitInfoFileName
     (constructCommitInfoFile absPath index comment time)
     True
   copyFile file (filePath newRevDir)
@@ -96,7 +110,7 @@ getCvsForFile path = do
     Just Document{ fileParent = parent } -> getDirectoryByPath (fromJust parent)
     Just d@Directory{} -> return d
     Nothing -> throwM NoSuchFile
-  case findInFolder dir ".cvs" of
+  case findInFolder dir cvsFileName of
     Just cvs@Directory{} -> return $ Just cvs
     Just Document{} -> throwM InvalidCVSRepository
     Nothing ->
@@ -122,7 +136,7 @@ getAllRevisionsOfFile path = getCVSRevisionDirOrError path >>= return . director
 
 getCommitInfoFromRevisionDir :: File -> FileSystem CommitInfo
 getCommitInfoFromRevisionDir dir = do
-  case findInFolder dir "COMMIT_INFO" of
+  case findInFolder dir commitInfoFileName of
     Just info@Document{} -> deserializeCommitInfo (documentContent info)
     Just Directory{} -> throwM InvalidCVSRevisionDirectory
     Nothing -> throwM InvalidCVSRevisionDirectory
