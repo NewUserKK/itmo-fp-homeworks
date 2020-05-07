@@ -44,17 +44,17 @@ findInFolder folder name = find ((name ==) . fileName) (directoryContents folder
 isParentOf :: File -> File -> Bool
 isParentOf parent file = (filePath parent) `Path.isParentOf` (filePath file)
 
-emptyDirectory :: Path -> File
-emptyDirectory path = Directory {
-   filePath = path
+emptyDirectory :: File
+emptyDirectory = Directory 
+  { filePath = emptyPath
   , filePermissions = defaultPermissions
   , directoryContents = []
-  , fileParent = Just $ getParentPath path
+  , fileParent = Nothing
   }
 
-emptyDocument :: Path -> UTCTime -> File
-emptyDocument path creationTime = Document
-  { filePath = path
+emptyDocument :: UTCTime -> File
+emptyDocument creationTime = Document
+  { filePath = emptyPath
   , filePermissions = defaultPermissions
   , fileParent = Nothing
   , documentCreationTime = creationTime

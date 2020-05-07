@@ -35,6 +35,7 @@ data Command
   | Find StringPath String
   | CVSInit StringPath
   | CVSAdd StringPath
+  | CVSUpdate StringPath String
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -87,6 +88,7 @@ parseCommand s =
     "cvs" :| ["init"] -> Right $ CVSInit "."
     "cvs" :| "init" : [path] -> Right $ CVSInit path
     "cvs" :| "add" : [path] -> Right $ CVSAdd path
+    "cvs" :| "update" : path : [comment] -> Right $ CVSUpdate path comment
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -104,6 +106,7 @@ execCommand e =
     Find path name -> execFind path name
     CVSInit path -> execCvsInit path
     CVSAdd path -> execCvsAdd path
+    CVSUpdate path comment -> execCvsUpdate path comment
 
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
@@ -142,10 +145,15 @@ execFind path name = do
   liftIO $ print result
 
 execCvsInit :: StringPath -> FileSystem ()
-execCvsInit = cvsInit
+execCvsInit path = do
+  created <- cvsInit path
+  liftIO $ putStrLn $ "Initialized empty CVS repository at " ++ (pathToString $ filePath created)
 
 execCvsAdd :: StringPath -> FileSystem ()
 execCvsAdd = cvsAdd
+
+execCvsUpdate :: StringPath -> String -> FileSystem ()
+execCvsUpdate = cvsUpdate
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

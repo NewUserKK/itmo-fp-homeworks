@@ -30,9 +30,11 @@ data CommandExecutionError
   | CannotCreateRoot
   | CannotRemoveRoot
   | CannotRemoveParent
-  | CvsExists StringPath
-  | CvsDoesNotExist
-  | InvalidCvsFolder
+  | CVSAlreadyExists StringPath
+  | CVSDoesNotExist
+  | InvalidCVSRepository
+  | InvalidCVSRevisionDirectory
+  | FileNotAddedToCVS
   deriving (Show, Exception)
 
 
@@ -41,6 +43,13 @@ toAbsoluteFSPath path = do
   fsRoot <- filePath <$> gets rootDirectory
   currentDir <- filePath <$> gets currentDirectory
   return $ toAbsolutePath path fsRoot currentDir
+
+getFileByPathOrError :: Path -> FileSystem File
+getFileByPathOrError path = do
+  maybeFile <- getFileByPath path
+  case maybeFile of
+    Just f -> return f
+    Nothing -> throwM NoSuchFile
 
 getFileByPath :: Path -> FileSystem (Maybe File)
 getFileByPath path = toAbsoluteFSPath path >>= getFileByAbsolutePath

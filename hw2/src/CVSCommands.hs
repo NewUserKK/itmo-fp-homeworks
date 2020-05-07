@@ -4,13 +4,12 @@ import Filesystem
 import CVS
 import Path
 import File
-import Control.Monad.State
 
-cvsInit :: StringPath -> FileSystem ()
-cvsInit stringPath = do
-  created <- CVS.cvsInit (stringToPath stringPath)
-  liftIO $ putStrLn $
-    "Initialized empty CVS repository at " ++ (pathToString . filePath $ created)
+cvsInit :: StringPath -> FileSystem File
+cvsInit = CVS.cvsInit . stringToPath
     
 cvsAdd :: StringPath -> FileSystem ()
 cvsAdd = CVS.cvsAdd . stringToPath
+
+cvsUpdate :: StringPath -> String -> FileSystem ()
+cvsUpdate = CVS.cvsUpdate . stringToPath

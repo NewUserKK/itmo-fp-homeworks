@@ -30,13 +30,13 @@ getContents path = do
 makeDirectory :: StringPath -> FileSystem ()
 makeDirectory stringPath = do
   let path = stringToPath stringPath
-  void $ createFile path (emptyDirectory path) False
+  void $ createFile path emptyDirectory False
 
 makeFile :: StringPath -> BS.ByteString -> FileSystem ()
 makeFile stringPath text = do
   let path = stringToPath stringPath
   modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
-  let file = (emptyDocument path modificationTime) {
+  let file = (emptyDocument modificationTime) {
       documentSize = BS.length text
     , documentContent = text
     }
