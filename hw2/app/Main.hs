@@ -16,6 +16,7 @@ import System.IO (hFlush, stdout)
 import Utils
 import Path
 import File
+import Data.List (intercalate)
 
 data Arguments =
   Arguments
@@ -36,6 +37,7 @@ data Command
   | CVSInit StringPath
   | CVSAdd StringPath
   | CVSUpdate StringPath String
+  | CVSHistory StringPath
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -89,6 +91,7 @@ parseCommand s =
     "cvs" :| "init" : [path] -> Right $ CVSInit path
     "cvs" :| "add" : [path] -> Right $ CVSAdd path
     "cvs" :| "update" : path : [comment] -> Right $ CVSUpdate path comment
+    "cvs" :| "history" : [path] -> Right $ CVSHistory path
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -107,6 +110,7 @@ execCommand e =
     CVSInit path -> execCvsInit path
     CVSAdd path -> execCvsAdd path
     CVSUpdate path comment -> execCvsUpdate path comment
+    CVSHistory path -> execCvsHistory path
 
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
@@ -154,6 +158,12 @@ execCvsAdd = cvsAdd
 
 execCvsUpdate :: StringPath -> String -> FileSystem ()
 execCvsUpdate = cvsUpdate
+
+execCvsHistory :: StringPath -> FileSystem ()
+execCvsHistory path = do
+  history <- cvsHistory path
+  liftIO $ putStrLn $ "Commit history for " ++ path
+  liftIO $ putStrLn $ intercalate "\n" (Prelude.map show history)
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()
 printCommandExecutionError e = liftIO $ print e

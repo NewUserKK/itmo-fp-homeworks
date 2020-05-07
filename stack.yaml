@@ -21,6 +21,7 @@ extra-deps:
 - time-1.8.0.2
 - Diff-0.4.0
 - SHA-1.6.4.4
+- aeson-1.4.7.1
 
 flags: {}
 

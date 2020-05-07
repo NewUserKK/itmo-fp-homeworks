@@ -11,7 +11,7 @@ import Path
 import File
 import Control.Exception (throw)
 import GHC.Int (Int64)
-import System.Directory (Permissions, emptyPermissions)
+import System.Directory (Permissions)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import Control.Monad.Catch (throwM)

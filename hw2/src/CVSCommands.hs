@@ -13,3 +13,9 @@ cvsAdd = CVS.cvsAdd . stringToPath
 
 cvsUpdate :: StringPath -> String -> FileSystem ()
 cvsUpdate = CVS.cvsUpdate . stringToPath
+
+cvsHistory :: StringPath -> FileSystem [CommitInfo]
+cvsHistory stringPath = do
+  path <- toAbsoluteFSPath $ stringToPath stringPath
+  traverse getCommitInfoFromRevisionDir =<< getAllRevisionsOfFile path
+

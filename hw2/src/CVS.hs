@@ -1,23 +1,40 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module CVS where
 
-import Path
-import File
-import Filesystem as FS
-import Control.Monad.State
 import Control.Monad.Catch (throwM)
-import Data.Maybe (fromJust, mapMaybe)
-import Data.List (sort)
+import Control.Monad.State
+import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as BS
-import Utils (readMaybeInt)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Time (UTCTime)
-import Data.Time.Clock.System (systemToUTCTime, getSystemTime)
+import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
+import File
+import Filesystem
+import GHC.Generics
+import Path
+import Utils (readMaybeInt)
+
+data CommitInfo =
+  CommitInfo
+    { commitIndex :: Int
+    , commitPath :: Path
+    , commitMessage :: String
+    }
+  deriving (Generic)
+
+instance FromJSON CommitInfo
+instance ToJSON CommitInfo
+
+instance Show CommitInfo where
+  show info = (show $ commitIndex info) ++ ". " ++ (commitMessage info)
 
 cvsInit :: Path -> FileSystem File
 cvsInit path = do
   existing <- getCvsForFile path
   case existing of
     Just cvs -> throwM $ CVSAlreadyExists (pathToString $ filePath cvs)
-    Nothing -> FS.createFileByName path ".cvs" emptyDirectory False
+    Nothing -> createFileByName path ".cvs" emptyDirectory False
 
 cvsAdd :: Path -> FileSystem ()
 cvsAdd path = do
@@ -27,10 +44,9 @@ cvsAdd path = do
 
 cvsUpdate :: Path -> String -> FileSystem ()
 cvsUpdate path comment = do
-  cvsRevDir <- getCVSRevisionDirOrError path
   file <- getFileByPathOrError path
-  let newRev = (+1) $ maximum $ mapMaybe (readMaybeInt . fileName) (directoryContents cvsRevDir)
-  createNewRevision path newRev file comment
+  newRevIndex <- (+1) <$> getLatestRevisionIndex path
+  createNewRevision path newRevIndex file comment
 
 createNewRevision :: Path -> Int -> File -> String -> FileSystem ()
 createNewRevision filepath index file comment = do
@@ -41,23 +57,9 @@ createNewRevision filepath index file comment = do
   _ <- createFileByName
     (filePath newRevDir)
     "COMMIT_INFO"
-    (constructCommitInfoFile absPath comment time)
+    (constructCommitInfoFile absPath index comment time)
     True
   copyFile file (filePath newRevDir)
-
-getCVSRevisionDir :: Path -> FileSystem (Maybe File)
-getCVSRevisionDir path = do
-  cvsDir <- getCvsForFileOrError path
-  hash <- revisionHash path
-  return $ findInFolder cvsDir hash
-    
-getCVSRevisionDirOrError :: Path -> FileSystem File
-getCVSRevisionDirOrError path = do
-  revDir <- getCVSRevisionDir path
-  case revDir of
-    Just dir@Directory{} -> return dir
-    Just Document{} -> throwM InvalidCVSRevisionDirectory
-    Nothing -> throwM FileNotAddedToCVS
 
 createCVSRevisionDir :: Path -> FileSystem ()
 createCVSRevisionDir path = do
@@ -67,7 +69,26 @@ createCVSRevisionDir path = do
   case maybeRevDir of
     Nothing -> void $ createFileByName (filePath cvsDir) hash emptyDirectory False
     Just _ -> return ()
-    
+
+getCVSRevision :: Path -> Int -> FileSystem (Maybe File)
+getCVSRevision path index = do
+  cvsDir <- getCVSRevisionDirOrError path
+  return $ findInFolder cvsDir (show index)
+
+getCVSRevisionDir :: Path -> FileSystem (Maybe File)
+getCVSRevisionDir path = do
+  cvsDir <- getCvsForFileOrError path
+  hash <- revisionHash path
+  return $ findInFolder cvsDir hash
+
+getCVSRevisionDirOrError :: Path -> FileSystem File
+getCVSRevisionDirOrError path = do
+  revDir <- getCVSRevisionDir path
+  case revDir of
+    Just dir@Directory{} -> return dir
+    Just Document{} -> throwM InvalidCVSRevisionDirectory
+    Nothing -> throwM FileNotAddedToCVS
+
 getCvsForFile :: Path -> FileSystem (Maybe File)
 getCvsForFile path = do
   file <- getFileByPath path
@@ -91,11 +112,40 @@ getCvsForFileOrError path = do
     Just Document{} -> throwM InvalidCVSRevisionDirectory
     Nothing -> throwM CVSDoesNotExist
 
-constructCommitInfoFile :: Path -> String -> UTCTime -> File
-constructCommitInfoFile commitedFilePath comment creationTime =
+getLatestRevisionIndex :: Path -> FileSystem Int
+getLatestRevisionIndex path = do
+  revDir <- getCVSRevisionDirOrError path
+  return $ maximum $ mapMaybe (readMaybeInt . fileName) (directoryContents revDir)
+
+getAllRevisionsOfFile :: Path -> FileSystem [File]
+getAllRevisionsOfFile path = getCVSRevisionDirOrError path >>= return . directoryContents
+
+getCommitInfoFromRevisionDir :: File -> FileSystem CommitInfo
+getCommitInfoFromRevisionDir dir = do
+  case findInFolder dir "COMMIT_INFO" of
+    Just info@Document{} -> deserializeCommitInfo (documentContent info)
+    Just Directory{} -> throwM InvalidCVSRevisionDirectory
+    Nothing -> throwM InvalidCVSRevisionDirectory
+
+constructCommitInfoFile :: Path -> Int -> String -> UTCTime -> File
+constructCommitInfoFile committedFilePath index comment creationTime = do
+  let commitInfo = CommitInfo {
+      commitIndex = index
+    , commitPath = committedFilePath
+    , commitMessage = comment
+    }
   (emptyDocument creationTime)
-    { documentContent = BS.pack $ (pathToString commitedFilePath) ++ "\n" ++ comment
+    { documentContent = serializeCommitInfo commitInfo
     }
 
 revisionHash :: Path -> FileSystem String
 revisionHash path = toAbsoluteFSPath path >>= return . pathHash
+
+deserializeCommitInfo :: BS.ByteString -> FileSystem CommitInfo
+deserializeCommitInfo content = 
+  case eitherDecode content of
+    Right info -> return info
+    Left _ -> throwM MalformedCommitInfo
+
+serializeCommitInfo :: CommitInfo -> BS.ByteString
+serializeCommitInfo = encode

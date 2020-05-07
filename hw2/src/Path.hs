@@ -31,7 +31,7 @@ nameByPath = NE.last
 
 stringToPath :: StringPath -> Path
 stringToPath "/" = "/":|[]
-stringToPath ('/':cs) = "/" :| NE.drop 1 (splitOn '/' cs)
+stringToPath ('/':cs) = "/" :| NE.toList (splitOn '/' cs)
 stringToPath s = splitOn '/' s
 
 pathToString :: Path -> StringPath
