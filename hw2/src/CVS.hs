@@ -89,6 +89,23 @@ getCVSRevision path index = do
   cvsDir <- getCVSRevisionDirOrError path
   return $ findInFolder cvsDir (show index)
 
+getCVSRevisionOrError :: Path -> Int -> FileSystem File
+getCVSRevisionOrError path index = do
+  maybeRevision <- getCVSRevision path index
+  case maybeRevision of
+    Just revision -> return revision
+    Nothing -> throwM UnknownRevision
+
+removeFromCVS :: Path -> FileSystem ()
+removeFromCVS path = do
+  cvsDir <- getCVSRevisionDirOrError path
+  removeFile $ filePath cvsDir
+
+removeRevision :: Path -> Int -> FileSystem ()
+removeRevision path index = do
+  revision <- getCVSRevisionOrError path index
+  removeFile $ filePath revision
+
 getCVSRevisionDir :: Path -> FileSystem (Maybe File)
 getCVSRevisionDir path = do
   cvsDir <- getCVSForFileOrError path
@@ -129,7 +146,10 @@ getCVSForFileOrError path = do
 getLatestRevisionIndex :: Path -> FileSystem Int
 getLatestRevisionIndex path = do
   revDir <- getCVSRevisionDirOrError path
-  return $ maximum $ mapMaybe (readMaybeInt . fileName) (directoryContents revDir)
+  let revisions = mapMaybe (readMaybeInt . fileName) (directoryContents revDir)
+  if (null revisions)
+    then return (-1)
+    else return $ maximum revisions
 
 getAllRevisionsOfDirectory :: File -> FileSystem [[File]]
 getAllRevisionsOfDirectory dir@Directory{} = do

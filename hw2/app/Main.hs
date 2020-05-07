@@ -40,6 +40,8 @@ data Command
   | CVSUpdate StringPath String
   | CVSHistory StringPath
   | CVSShow StringPath Int
+  | CVSRemove StringPath
+  | CVSRemoveRevision StringPath Int
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -99,6 +101,11 @@ parseCommand s =
       case readMaybeInt index of
         Just i -> Right $ CVSShow path i
         Nothing -> Left IntParseError
+    "cvs" :| "rm-rev" : path : [index] ->
+      case readMaybeInt index of
+        Just i -> Right $ CVSRemoveRevision path i
+        Nothing -> Left IntParseError
+    "cvs" :| "rm" : [path] -> Right $ CVSRemove path
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -119,7 +126,9 @@ execCommand e =
     CVSUpdate path comment -> execCvsUpdate path comment
     CVSHistory path -> execCvsHistory path
     CVSShow path index -> execCvsShow path index
-
+    CVSRemove path -> execCvsRemove path 
+    CVSRemoveRevision path index -> execCvsRemoveRevision path index
+  
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
 
@@ -184,6 +193,17 @@ execCvsShow :: StringPath -> Int -> FileSystem ()
 execCvsShow path index = do
   contents <- cvsShow path index
   liftIO $ BS.putStrLn contents
+  
+execCvsRemove :: StringPath -> FileSystem ()
+execCvsRemove path = do
+  cvsRemove path
+  liftIO $ putStrLn $ "Removed " ++ path ++ " from CVS"
+  
+execCvsRemoveRevision :: StringPath -> Int -> FileSystem ()
+execCvsRemoveRevision path index = do
+  cvsRemoveRevision path index
+  liftIO $ putStrLn $ "Removed revision " ++ show index ++ " of " ++ path ++ " from CVS"
+
 
 getRevisionsMessageForDocument :: [CommitInfo] -> String
 getRevisionsMessageForDocument [] = "No history"

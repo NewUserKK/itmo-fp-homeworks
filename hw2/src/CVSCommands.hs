@@ -30,9 +30,12 @@ cvsHistoryForDirectory Document{} = throwM DirectoryExpected
 cvsShow :: StringPath -> Int -> FileSystem BS.ByteString
 cvsShow stringPath index = do
   let path = stringToPath stringPath
-  maybeRevision <- getCVSRevision path index
-  case maybeRevision of
-    Just revision -> do
-      file <- getFileFromRevisionDir revision
-      return $ documentContent file
-    Nothing -> throwM UnknownRevision
+  revision <- getCVSRevisionOrError path index
+  file <- getFileFromRevisionDir revision
+  return $ documentContent file
+
+cvsRemove :: StringPath -> FileSystem ()
+cvsRemove = removeFromCVS . stringToPath
+
+cvsRemoveRevision :: StringPath -> Int -> FileSystem ()
+cvsRemoveRevision = removeRevision . stringToPath
