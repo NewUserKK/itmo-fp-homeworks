@@ -1,19 +1,37 @@
 module Path where
 
+import qualified Data.ByteString.Lazy.Char8 as BS
+import Data.Digest.Pure.SHA
+import Data.List (intercalate)
 import Data.List.NonEmpty as NE
 import Utils
-import Data.List (intercalate)
 
 type Path = NonEmpty String
 
 type StringPath = String
+
+toAbsolutePath :: Path -> Path -> Path -> Path
+toAbsolutePath path rootPath currentPath =
+  case path of
+    "/" :| [] -> stringToPath "/"
+    "/" :| cs -> _toAbsolutePath (NE.fromList cs) rootPath
+    _ -> _toAbsolutePath path currentPath
+  where
+    _toAbsolutePath :: Path -> Path -> Path
+    _toAbsolutePath path' rootPath' = foldl foldFunc rootPath' path'
+      where
+        foldFunc acc dir =
+          case dir of
+            "." -> acc
+            ".." -> getParentPath acc
+            s -> acc <:| s
 
 nameByPath :: Path -> String
 nameByPath = NE.last
 
 stringToPath :: StringPath -> Path
 stringToPath "/" = "/":|[]
-stringToPath ('/':cs) = "/" :| NE.drop 1 (splitOn '/' cs)
+stringToPath ('/':cs) = "/" :| NE.toList (splitOn '/' cs)
 stringToPath s = splitOn '/' s
 
 pathToString :: Path -> StringPath
@@ -38,3 +56,9 @@ concatPath parentPath path = parentPath ++ "/" ++ path
 
 (</>) ::  FilePath -> FilePath -> FilePath
 (</>) = concatPath
+
+pathHash :: Path -> String
+pathHash = show . sha1 . BS.pack . pathToString
+
+emptyPath :: Path
+emptyPath = "" :| []

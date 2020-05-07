@@ -11,7 +11,7 @@ import Path
 import File
 import Control.Exception (throw)
 import GHC.Int (Int64)
-import System.Directory (Permissions, emptyPermissions)
+import System.Directory (Permissions)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import Control.Monad.Catch (throwM)
@@ -19,67 +19,57 @@ import Control.Monad.Catch (throwM)
 changeDirectory :: StringPath -> FileSystem ()
 changeDirectory path = do
   st <- get
-  newDirectory <- liftIO $ evalStateT (getDirectoryByPath path) st
+  newDirectory <- liftIO $ evalStateT (getDirectoryByPath $ stringToPath path) st
   modify (\s -> s { currentDirectory = newDirectory })
 
 getContents :: StringPath -> FileSystem [File]
 getContents path = do
-  dir <- getDirectoryByPath path
+  dir <- getDirectoryByPath $ stringToPath path
   return $ directoryContents dir
 
 makeDirectory :: StringPath -> FileSystem ()
-makeDirectory path = do
-  let directory = Directory {
-     filePath = stringToPath path
-    , filePermissions = emptyPermissions
-    , directoryContents = []
-    , fileParent = Just $ getParentPath $ stringToPath path
-    }
-  createFile path directory False
+makeDirectory stringPath = do
+  let path = stringToPath stringPath
+  void $ createFile path emptyDirectory False
 
 makeFile :: StringPath -> BS.ByteString -> FileSystem ()
-makeFile path text = do
+makeFile stringPath text = do
+  let path = stringToPath stringPath
   modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
-  let file = Document {
-      filePath = stringToPath path
-    , filePermissions = emptyPermissions
-    , fileParent = Nothing
-    , documentCreationTime = modificationTime
-    , documentUpdateTime = modificationTime
-    , documentSize = BS.length text
+  let file = (emptyDocument modificationTime) {
+      documentSize = BS.length text
     , documentContent = text
     }
-  createFile path file False
+  void $ createFile path file False
 
 removeFile :: StringPath -> FileSystem ()
-removeFile = Filesystem.removeFile
-
+removeFile = Filesystem.removeFile . stringToPath
 
 copyFile :: StringPath -> StringPath -> FileSystem ()
 copyFile path targetPath = do
-  file <- getFileByPath path
+  file <- getFileByPath $ stringToPath path
   case file of
-    Just f -> Filesystem.copyFile f targetPath
-    Nothing -> throwM NoSuchFile 
+    Just f -> Filesystem.copyFile f (stringToPath targetPath)
+    Nothing -> throwM NoSuchFile
 
 appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
 appendToFile path text = do
-  file <- getDocumentByPath path
+  file <- getDocumentByPath $ stringToPath path
   modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
   let newFile = file {
     documentUpdateTime = modificationTime,
     documentContent = (documentContent file) <> text
   }
-  createFileOverwriting path newFile
+  void $ createFile (stringToPath path) newFile True
 
 readFileContents :: StringPath -> FileSystem BS.ByteString
 readFileContents path = do
-  file <- getDocumentByPath path
+  file <- getDocumentByPath $ stringToPath path
   return $ documentContent file
 
 getFileInfo :: StringPath -> FileSystem String
 getFileInfo path = do
-  file <- getFileByPath path
+  file <- getFileByPath $ stringToPath path
   case file of
     Just dir@Directory{} -> do
       let filepath = pathToString $ filePath dir
@@ -90,12 +80,13 @@ getFileInfo path = do
       return $ constructDirectoryInfo filepath parentPath permissions fileCount size
     Just doc@Document{} -> do
       let filepath = pathToString $ filePath doc
+      let parentPath = show $ pathToString <$> fileParent doc
       let permissions = filePermissions doc
       let extension = extensionFromPath $ filePath doc
       let creationTime = documentCreationTime doc
       let modificationTime = documentUpdateTime doc
       let size = getFileSize doc
-      return $ constructDocumentInfo filepath permissions extension creationTime modificationTime size
+      return $ constructDocumentInfo filepath parentPath permissions extension creationTime modificationTime size
     Nothing -> throwM NoSuchFile
 
 constructDirectoryInfo :: StringPath -> StringPath -> Permissions -> Int -> Int64 -> String
@@ -106,9 +97,10 @@ constructDirectoryInfo path parentPath permissions fileCount size =
   "Files: " ++ show fileCount ++ "\n" ++
   "Size: " ++ show size ++ "B"
 
-constructDocumentInfo :: StringPath -> Permissions -> String -> UTCTime -> UTCTime -> Int64 -> String
-constructDocumentInfo path permissions extension creationTime modificationTime size =
+constructDocumentInfo :: StringPath -> StringPath -> Permissions -> String -> UTCTime -> UTCTime -> Int64 -> String
+constructDocumentInfo path parentPath permissions extension creationTime modificationTime size =
   "Path: " ++ path ++ "\n" ++
+  "Parent: " ++ parentPath ++ "\n" ++
   "Permissions: " ++ show permissions ++ "\n" ++
   "File type: " ++ extension ++ "\n" ++
   "Created at: " ++ show creationTime ++ "\n" ++
@@ -122,6 +114,5 @@ getFileSize doc@Document{} = BS.length $ documentContent doc
 
 findByName :: StringPath -> String -> FileSystem [String]
 findByName rootPath name = do
-  root <- getDirectoryByPath rootPath
+  root <- getDirectoryByPath (stringToPath rootPath)
   return $ Prelude.map (pathToString . filePath) (findInPathByName root name)
-  

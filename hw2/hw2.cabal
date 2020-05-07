@@ -18,12 +18,14 @@ tested-with:         GHC == 8.0.1
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Filesystem
-                     , Path
+  exposed-modules:     Path
                      , File
                      , Utils
+                     , Filesystem
                      , FilesystemLoader
                      , FilesystemCommands
+                     , CVS
+                     , CVSCommands
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
                      , mtl
@@ -32,6 +34,9 @@ library
                      , transformers
                      , bytestring
                      , time
+                     , Diff
+                     , SHA
+                     , aeson
   default-language:    Haskell2010
 
 executable hw2

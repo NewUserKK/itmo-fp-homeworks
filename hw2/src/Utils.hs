@@ -2,8 +2,9 @@
 
 module Utils where
 
-import Data.List.NonEmpty
+import Data.List.NonEmpty as NE
 import Data.Maybe (fromMaybe)
+import Text.Read (readMaybe)
 
 -- | Split list of values by given value.
 -- Return non-empty list of lists of stored parts.
@@ -36,3 +37,5 @@ infixl 1 `orElse`
 orElse :: Maybe a -> a -> a
 orElse = flip fromMaybe
 
+readMaybeInt :: String -> Maybe Int
+readMaybeInt = readMaybe

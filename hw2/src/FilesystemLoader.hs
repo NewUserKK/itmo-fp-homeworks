@@ -42,7 +42,11 @@ fileFromPath realFsRoot parentPath path =
 
 constructDirectory :: FilePath -> FilePath -> FilePath -> MaybeT IO (File)
 constructDirectory realFsRoot localParentPath name = do
-  let localPath = localParentPath </> name
+  let localPath = 
+        case localParentPath of
+          "" -> "/"
+          "/" -> "/" ++ name
+          _ -> localParentPath </> name
   let realPath = realFsRoot ++ localPath
 
   isDirectory <- liftIO $ doesDirectoryExist realPath
@@ -62,7 +66,10 @@ constructDirectory realFsRoot localParentPath name = do
 
 constructDocument :: FilePath -> FilePath -> MaybeT IO (File)
 constructDocument parentPath path = do
-  let realPath = parentPath </> path
+  let realPath = 
+        if parentPath == "/" 
+          then "/" ++ path
+          else parentPath </> path
   isFile <- liftIO $ doesFileExist path
   guard isFile
 
