@@ -208,7 +208,7 @@ createNewRevision filepath index file comment = do
     True
   copyFile file (filePath newRevDir)
   getDirectoryByPathOrError (filePath newRevDir)
-    
+
 revisionHash :: Path -> FileSystem String
 revisionHash path = toAbsoluteFSPath path >>= return . pathHash
 
@@ -216,9 +216,9 @@ revisionHash path = toAbsoluteFSPath path >>= return . pathHash
 
 {-|
   Get revision for a file by its index assuming that file added to VCS..
-  
+
   Returns @Maybe@ revision with given index.
-  
+
   Throws:
     * @CVSDoesNotExist@ if file does not belong to any CVS
     * @FileNotAddedToCVS@ if file is not added to CVS
@@ -250,12 +250,12 @@ getLatestRevisionIndex path = do
   if (null revisions)
     then return (-1)
     else return $ maximum revisions
-    
+
 {-|
   Get revision for a file by its index assuming that file added to VCS..
-  
+
   Returns revision with given index.
-  
+
   Throws:
     * @CVSDoesNotExist@ if file does not belong to any CVS
     * @FileNotAddedToCVS@ if file is not added to CVS
@@ -271,9 +271,9 @@ getRevisionOrError path index = do
 
 {-|
   Get all revisions of all files in directory and its subdirectories.
-  
-  Returns list of list of revisions of all files thatin this directory and its subdirectories. 
-  
+
+  Returns list of list of revisions of all files thatin this directory and its subdirectories.
+
   Throws:
     * @CVSDoesNotExist@ if file does not belong to any CVS
     * @DirectoryExpected@ if @Document@ is given
@@ -294,9 +294,9 @@ filterAddedToCvs list = catMaybes <$> traverse mapFunc list
 
 {-|
   Get revision of a document.
-  
-  Returns list of all revisions of all files in this directory and subdirectories. 
-  
+
+  Returns list of all revisions of all files in this directory and subdirectories.
+
   Throws:
     * @CVSDoesNotExist@ if file does not belong to any CVS
     * @DocumentExpected@ if @Directory@ is given
@@ -304,9 +304,9 @@ filterAddedToCvs list = catMaybes <$> traverse mapFunc list
     * @InvalidCVSRevisionDirectory@ if revision directory is document
 -}
 getAllRevisionsOfDocument :: File -> FileSystem [File]
-getAllRevisionsOfDocument Document{} = throwM DocumentExpected 
-getAllRevisionsOfDocument dir =
-  getRevisionDirOrError (filePath dir) >>=
+getAllRevisionsOfDocument Directory{} = throwM DocumentExpected
+getAllRevisionsOfDocument file =
+  getRevisionDirOrError (filePath file) >>=
   return . directoryContents
 
 
@@ -314,7 +314,7 @@ getAllRevisionsOfDocument dir =
 
 {-|
   Remove file from CVS.
-  
+
   Throws:
     * @CVSDoesNotExist@ if file does not belong to any CVS
     * @DocumentExpected@ if @Directory@ is given
@@ -329,7 +329,7 @@ removeFromCVS path = do
 
 {-|
   Remove certain revision of a document from CVS.
-  
+
   Throws:
     * @CVSDoesNotExist@ if file does not belong to any CVS
     * @DocumentExpected@ if @Directory@ is given
@@ -347,7 +347,7 @@ removeRevision path index = do
 
 {-|
   Get commit information from given revision directory.
-  
+
   Throws:
     * @InvalidCVSRevisionDirectory@ if there is no COMMIT_INFO file in revision directory
     * @MalformedCommitInfo@ if COMMIT_INFO contains invalid data
@@ -361,7 +361,7 @@ getCommitInfo revisionDir = do
 
 {-|
   Extract file from revision directory
-  
+
   Throws:
     * @InvalidCVSRevisionDirectory@ if there is no COMMIT_INFO file in revision directory
         or if there is no file found on path from COMMIT_INFO file
@@ -402,9 +402,9 @@ serializeCommitInfo = encode
 {-|
   Merge two revisions of a file, create new revision with merge result and replace file
   in filesystem with that new revision.
-  
+
   Merging is happening by strategy as described in @MergeStrategy@ constructors.
-  
+
   Throws:
     * @InvalidCVSRevisionDirectory@ if there is no COMMIT_INFO file in revision directory
         or if there is no file found on path from COMMIT_INFO file
