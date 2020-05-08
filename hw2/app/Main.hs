@@ -11,7 +11,8 @@ import Filesystem (FileSystem, FSState(..), CommandExecutionError, toAbsoluteFSP
 import FilesystemCommands
 import CVSCommands
 import FilesystemLoader
-import Options.Applicative
+import FilesystemDumper
+import Options.Applicative hiding (command)
 import System.IO (hFlush, stdout)
 import Utils
 import Path
@@ -43,6 +44,7 @@ data Command
   | CVSRemove StringPath
   | CVSRemoveRevision StringPath Int
   | CVSMergeRevisions StringPath Int Int MergeStrategy
+  | Exit
 
 data UnknownCommandError
   = UnknownCommandError String
@@ -63,7 +65,8 @@ main = do
 launch :: Arguments -> IO ()
 launch Arguments{ workingDirectory = root } = do
   initialState <- loadFilesystem root
-  evalStateT loop initialState
+  resultState <- execStateT loop initialState
+  dumpFilesystem resultState
 
 loop :: FileSystem ()
 loop = do
@@ -71,10 +74,13 @@ loop = do
   liftIO $ putStr $ show currentDir ++ "> "
   liftIO $ hFlush stdout
   line <- liftIO $ getLine
-  case parseCommand line of
+  let command = parseCommand line
+  case command of
     Right cmd -> execCommand cmd `catch` printCommandExecutionError
     Left err -> printError err
-  loop
+  case command of
+    Right Exit -> return ()
+    _ -> loop
 
 parseArguments :: Parser Arguments
 parseArguments =
@@ -110,6 +116,7 @@ parseCommand s =
         "right" -> Right $ CVSMergeRevisions path i1 i2 MergeRight
         "both" -> Right $ CVSMergeRevisions path i1 i2 MergeBoth
         _ -> Left $ UnknownMergeStrategy strategy
+    "exit" :| [] -> Right Exit
     _ -> Left $ UnknownCommandError s
 
 execCommand :: Command -> FileSystem ()
@@ -133,6 +140,7 @@ execCommand e =
     CVSRemove path -> execCvsRemove path 
     CVSRemoveRevision path index -> execCvsRemoveRevision path index
     CVSMergeRevisions path i1 i2 strategy -> execCvsMerge path i1 i2 strategy
+    Exit -> execExit
     
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
@@ -213,6 +221,11 @@ execCvsMerge :: StringPath -> Int -> Int -> MergeStrategy -> FileSystem ()
 execCvsMerge path index1 index2 strategy = do
   _ <- cvsMergeRevisions path index1 index2 strategy
   liftIO $ putStrLn "Created new file revision"
+
+execExit :: FileSystem ()
+execExit = do
+  liftIO $ putStrLn "Dumping files on hard drive..."
+  liftIO $ putStrLn "Backup will be created in .old_fs directory"
 
 getRevisionsMessageForDocument :: [CommitInfo] -> String
 getRevisionsMessageForDocument [] = "No history"
