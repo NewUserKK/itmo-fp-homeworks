@@ -40,7 +40,10 @@ pathToString ("/":|cs) = "/" ++ (intercalate "/" cs)
 pathToString path = intercalate "/" . NE.toList $ path
 
 extensionFromPath :: Path -> String
-extensionFromPath = NE.last . splitOn '.' . NE.last
+extensionFromPath path =
+  case splitOn '.' $ NE.last path of
+    _ :| [] -> ""
+    _ :| ext -> intercalate "." ext
 
 getParentPath :: Path -> Path
 getParentPath root@("/" :| []) = root
