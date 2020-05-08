@@ -1,12 +1,12 @@
 module FilesystemDumper where
 
+import Control.Monad.State
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE
-import Filesystem (FileSystem, FSState(..))
-import Path
-import Control.Monad.State
-import System.Directory
 import File
+import Filesystem (FSState(..))
+import Path
+import System.Directory
 
 dumpFilesystem :: FSState -> IO ()
 dumpFilesystem fsState = do

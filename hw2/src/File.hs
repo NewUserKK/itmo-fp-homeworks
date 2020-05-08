@@ -4,7 +4,6 @@
 module File where
 
 import Data.List
-import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Path
@@ -15,13 +14,13 @@ data File
   = Directory
       { filePath :: Path
       , filePermissions :: Permissions
-      , fileParent :: Maybe Path
+      , fileParent :: Path
       , directoryContents :: [File]
       }
   | Document
       { filePath :: Path
       , filePermissions :: Permissions
-      , fileParent :: Maybe Path
+      , fileParent :: Path
       , documentCreationTime :: UTCTime
       , documentUpdateTime :: UTCTime
       , documentSize :: Int64
@@ -29,10 +28,13 @@ data File
       }
 
 instance Eq File where
-  (==) a b = filePath a == filePath b
+  (==) a b = filePath a == filePath b && fileParent a == fileParent b
 
 instance Show File where
   show = pathToString . filePath
+  
+instance Ord File where
+  (<=) a b = (pathToString $ filePath a) <= (pathToString $ filePath b)
 
 filterDirectories :: [File] -> [File]
 filterDirectories = Prelude.filter (\case Directory{} -> True; _ -> False)
@@ -51,14 +53,14 @@ emptyDirectory = Directory
   { filePath = emptyPath
   , filePermissions = defaultPermissions
   , directoryContents = []
-  , fileParent = Nothing
+  , fileParent = stringToPath "/"
   }
 
 emptyDocument :: UTCTime -> File
 emptyDocument creationTime = Document
   { filePath = emptyPath
   , filePermissions = defaultPermissions
-  , fileParent = Nothing
+  , fileParent = stringToPath "/"
   , documentCreationTime = creationTime
   , documentUpdateTime = creationTime
   , documentSize = 0
