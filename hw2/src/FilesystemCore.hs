@@ -26,16 +26,26 @@ import File
 import Path
 import Utils
 
+{-|
+  Structure representing filesystem.
+  Exceptions are thrown via throwM so I assume StateT IO is fine.
+-}
 type FileSystem a = StateT FSState IO a
 
+{-|
+  Structure representing filesystem state.
+-}
 data FSState =
   FSState
-    { currentDirectory :: File
-    , rootDirectory :: File
-    , realRootPath :: StringPath
+    { currentDirectory :: File    -- ^ current directory of user
+    , rootDirectory :: File       -- ^ root directory of filesystem
+    , realRootPath :: StringPath  -- ^ root of a real filesystem
     }
   deriving (Show)
 
+{-|
+  Exception that may occur through commands execution
+-}
 data CommandExecutionError
   = DirectoryExpected
   | DocumentExpected
@@ -55,6 +65,9 @@ data CommandExecutionError
   | MalformedCommitInfo
   | UnknownRevision
   deriving (Show, Exception)
+
+
+-- Paths
 
 {-|
   Convert given path to absolute path relative to the root of filesystem.

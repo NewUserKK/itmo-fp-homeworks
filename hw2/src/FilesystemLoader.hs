@@ -1,7 +1,9 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module FilesystemLoader where
+module FilesystemLoader
+  ( loadFilesystem
+  ) where
 
 import Control.Applicative ((<|>))
 import Control.Monad
@@ -14,6 +16,9 @@ import FilesystemCore
 import Path
 import System.Directory
 
+{-|
+  Load filesystem by root path and return constructed from it @FSState@ .
+-}
 loadFilesystem :: String -> IO FSState
 loadFilesystem rootPath = do
   fsRoot <- makeAbsolute rootPath
@@ -70,9 +75,8 @@ constructDocument parentPath path = do
 
   let filepath = stringToPath realPath
   permissions <- liftIO $ getPermissions path
---  creationTime <- liftIO $ getCreationTime path
+--  creationTime <- liftIO $ getCreationTime path          couldn't find it in directory lib :(
   modificationTime <- liftIO $ getModificationTime path
-  fileSize <- liftIO $ fromIntegral <$> getFileSize path
   contents <- liftIO $ BS.readFile path
 
   return Document
@@ -81,6 +85,5 @@ constructDocument parentPath path = do
     , fileParent = stringToPath "/"
     , documentCreationTime = modificationTime
     , documentUpdateTime = modificationTime
-    , documentSize = fileSize
     , documentContent = contents
     }

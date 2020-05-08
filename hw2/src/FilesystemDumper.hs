@@ -1,4 +1,6 @@
-module FilesystemDumper where
+module FilesystemDumper
+  ( dumpFilesystem
+  ) where
 
 import Control.Monad.State
 import qualified Data.ByteString.Lazy.Char8 as BS
@@ -8,6 +10,10 @@ import FilesystemCore (FSState(..))
 import Path
 import System.Directory
 
+{-|
+  Dump @FSState@ to real filesystem.
+  For extra safety backup to .fm_old is made before replacement of files.
+-}
 dumpFilesystem :: FSState -> IO ()
 dumpFilesystem fsState = do
   let rootPath = realRootPath fsState

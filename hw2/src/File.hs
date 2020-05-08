@@ -8,7 +8,6 @@ import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Path
 import System.Directory
-import GHC.Int (Int64)
 
 data File
   = Directory
@@ -23,7 +22,6 @@ data File
       , fileParent :: Path
       , documentCreationTime :: UTCTime
       , documentUpdateTime :: UTCTime
-      , documentSize :: Int64
       , documentContent :: BS.ByteString
       }
 
@@ -63,7 +61,6 @@ emptyDocument creationTime = Document
   , fileParent = stringToPath "/"
   , documentCreationTime = creationTime
   , documentUpdateTime = creationTime
-  , documentSize = 0
   , documentContent = ""
   }
 

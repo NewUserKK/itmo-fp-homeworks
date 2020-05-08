@@ -33,10 +33,7 @@ makeFile :: StringPath -> BS.ByteString -> FileSystem ()
 makeFile stringPath text = do
   let path = stringToPath stringPath
   modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
-  let file = (emptyDocument modificationTime) {
-      documentSize = BS.length text
-    , documentContent = text
-    }
+  let file = (emptyDocument modificationTime) { documentContent = text }
   void $ createFile path file False
 
 removeFile :: StringPath -> FileSystem ()
