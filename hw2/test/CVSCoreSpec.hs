@@ -33,12 +33,12 @@ spec = do
       let actual = do
             _ <- cvsInit (toPath "/")
             _ <- cvsAdd (toPath "/dir1")
-            getCVSRevision (toPath "/dir1/file1.txt") 0 >>= return . (True <$)
+            getRevision (toPath "/dir1/file1.txt") 0 >>= return . (True <$)
       actual `evalShouldBe` expected
     it "fails to add if CVS does not exist" $ do
       let actual = do
             _ <- cvsAdd (toPath "/dir1")
-            getCVSRevision (toPath "/dir1") 0
+            getRevision (toPath "/dir1") 0
       evalShouldThrow actual
   describe "CVS.cvsUpdate" $ do
     it "updates file within CVS" $ do
@@ -47,18 +47,18 @@ spec = do
             _ <- cvsInit (toPath "/")
             _ <- cvsAdd (toPath "/dir1")
             _ <- cvsUpdate (toPath "/dir1/file1.txt") "upd"
-            getCVSRevision (toPath "/dir1/file1.txt") 1 >>= return . (True <$)
+            getRevision (toPath "/dir1/file1.txt") 1 >>= return . (True <$)
       actual `evalShouldBe` expected
     it "fails to update if CVS does not exist" $ do
       let actual = do
             _ <- cvsUpdate (toPath "/dir1/file1.txt") "upd"
-            getCVSRevision (toPath "/dir1") 0
+            getRevision (toPath "/dir1") 0
       evalShouldThrow actual
     it "fails to update if file not added to CVS" $ do
       let actual = do
             _ <- cvsInit (toPath "/")
             _ <- cvsUpdate (toPath "/dir1/file1.txt") "upd"
-            getCVSRevision (toPath "/dir1") 0
+            getRevision (toPath "/dir1") 0
       evalShouldThrow actual
   describe "CVS.getCVSRevision" $ do
     it "retrieves CVS revision by number" $ do
@@ -67,7 +67,7 @@ spec = do
             _ <- cvsInit (toPath "/")
             _ <- cvsAdd (toPath "/dir1")
             _ <- cvsUpdate (toPath "/dir1/file1.txt") "upd"
-            rev <- fromJust <$> getCVSRevision (toPath "/dir1/file1.txt") 1
+            rev <- fromJust <$> getRevision (toPath "/dir1/file1.txt") 1
             commitIndex <$> getCommitInfo rev
       actual `evalShouldBe` expected
     it "returns Nothing if revision does not exist" $ do
@@ -75,7 +75,7 @@ spec = do
       let actual = do
             _ <- cvsInit (toPath "/")
             _ <- cvsAdd (toPath "/dir1")
-            getCVSRevision (toPath "/dir1/file1.txt") 1
+            getRevision (toPath "/dir1/file1.txt") 1
       actual `evalShouldBe` expected
   describe "CVS.removeFromCVS" $ do
     it "removes file from CVS" $ do
@@ -83,9 +83,9 @@ spec = do
             let path = toPath "/dir1/file1.txt"
             _ <- cvsInit (toPath "/")
             _ <- cvsAdd (toPath "/dir1")
-            _ <- getCVSRevision path 0
+            _ <- getRevision path 0
             removeFromCVS path
-            getCVSRevision path 0
+            getRevision path 0
       evalShouldThrow actual
     it "throws if file is not added to CVS" $ do
       let actual = do
@@ -100,9 +100,9 @@ spec = do
             _ <- cvsInit (toPath "/")
             _ <- cvsAdd (toPath "/dir1")
             _ <- cvsUpdate path "upd"
-            _ <- getCVSRevision path 1
+            _ <- getRevision path 1
             removeRevision path 1
-            getCVSRevision path 1
+            getRevision path 1
       actual `evalShouldBe` expected
     it "throws if revision does not exist" $ do
       let actual = do
@@ -149,7 +149,7 @@ spec = do
             _ <- cvsInit $ toPath "/"
             _ <- cvsAdd path
             _ <- cvsUpdate path "upd1"
-            getCVSRevisionOrError path 1 >>= getCommitInfo
+            getRevisionOrError path 1 >>= getCommitInfo
       actual `evalShouldBe` expected
   describe "CVS.getFileFromRevision" $ do
     it "retrieves correct file from revision" $ do
@@ -158,7 +158,7 @@ spec = do
       let actual = do
             _ <- cvsInit $ toPath "/"
             _ <- cvsAdd path
-            rev <- getCVSRevisionOrError path 0
+            rev <- getRevisionOrError path 0
             getFileFromRevision rev >>= return . documentContent
       actual `evalShouldBe` expected
   describe "CVS.mergeRevisions" $ do
@@ -191,10 +191,10 @@ testMerge path newContent strategy = do
   let new = file1 { documentContent = newContent }
   _ <- createFile path new True
   _ <- cvsUpdate path "upd"
-  rev0 <- getCVSRevisionOrError path 0
-  rev1 <- getCVSRevisionOrError path 1
+  rev0 <- getRevisionOrError path 0
+  rev1 <- getRevisionOrError path 1
   _ <- mergeRevisions rev0 rev1 strategy
-  rev2 <- getCVSRevisionOrError path 2
+  rev2 <- getRevisionOrError path 2
   rev2File <- getFileFromRevision rev2
   let rev2Content = documentContent rev2File
   updatedFile <- getDocumentByPathOrError path

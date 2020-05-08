@@ -5,20 +5,26 @@ module Main where
 
 import Control.Monad.Catch
 import Control.Monad.State
-import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.List.NonEmpty as NE hiding (sort)
-import FilesystemCore (FileSystem, FSState(..), CommandExecutionError, toAbsoluteFSPath, getFileByPathOrError)
-import FilesystemCommands
 import CVSCommands
-import FilesystemLoader
+import CVSCore (CommitInfo, MergeStrategy(..), commitRealFilePath)
+import qualified Data.ByteString.Lazy.Char8 as BS
+import Data.List
+import Data.List.NonEmpty as NE hiding (sort)
+import File
+import FilesystemCommands
+import FilesystemCore 
+  ( CommandExecutionError
+  , FSState(..)
+  , FileSystem
+  , getFileByPathOrError
+  , toAbsoluteFSPath
+  )
 import FilesystemDumper
+import FilesystemLoader
 import Options.Applicative hiding (command)
+import Path
 import System.IO (hFlush, stdout)
 import Utils
-import Path
-import File
-import Data.List
-import CVSCore (CommitInfo, MergeStrategy(..), commitRealFilePath)
 
 data Arguments =
   Arguments
@@ -151,12 +157,12 @@ execCommand e =
     CVSUpdate path comment -> execCvsUpdate path comment
     CVSHistory path -> execCvsHistory path
     CVSShow path index -> execCvsShow path index
-    CVSRemove path -> execCvsRemove path 
+    CVSRemove path -> execCvsRemove path
     CVSRemoveRevision path index -> execCvsRemoveRevision path index
     CVSMergeRevisions path i1 i2 strategy -> execCvsMerge path i1 i2 strategy
     Exit -> execExit
     ShowHelp -> execShowHelp
-    
+
 execCd :: StringPath -> FileSystem ()
 execCd path = changeDirectory path
 
@@ -221,12 +227,12 @@ execCvsShow :: StringPath -> Int -> FileSystem ()
 execCvsShow path index = do
   contents <- cvsShow path index
   liftIO $ BS.putStrLn contents
-  
+
 execCvsRemove :: StringPath -> FileSystem ()
 execCvsRemove path = do
   cvsRemove path
   liftIO $ putStrLn $ "Removed " ++ path ++ " from CVS"
-  
+
 execCvsRemoveRevision :: StringPath -> Int -> FileSystem ()
 execCvsRemoveRevision path index = do
   cvsRemoveRevision path index

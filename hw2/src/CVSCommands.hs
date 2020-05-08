@@ -31,7 +31,7 @@ cvsHistoryForDirectory Document{} = throwM DirectoryExpected
 cvsShow :: StringPath -> Int -> FileSystem BS.ByteString
 cvsShow stringPath index = do
   let path = stringToPath stringPath
-  revision <- getCVSRevisionOrError path index
+  revision <- getRevisionOrError path index
   file <- getFileFromRevision revision
   return $ documentContent file
 
@@ -44,6 +44,6 @@ cvsRemoveRevision = removeRevision . stringToPath
 cvsMergeRevisions :: StringPath -> Int -> Int -> MergeStrategy -> FileSystem File
 cvsMergeRevisions stringPath index1 index2 strategy = do
   let path = stringToPath stringPath
-  revision1 <- getCVSRevisionOrError path index1
-  revision2 <- getCVSRevisionOrError path index2
+  revision1 <- getRevisionOrError path index1
+  revision2 <- getRevisionOrError path index2
   mergeRevisions revision1 revision2 strategy
