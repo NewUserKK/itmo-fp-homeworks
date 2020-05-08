@@ -70,14 +70,14 @@ getFileInfo path = do
   case file of
     Just dir@Directory{} -> do
       let filepath = pathToString $ filePath dir
-      let parentPath = show $ pathToString <$> fileParent dir
+      let parentPath = show $ pathToString $ fileParent dir
       let permissions = filePermissions dir
       let fileCount = Prelude.length $ directoryContents dir
       let size = getFileSize dir
       return $ constructDirectoryInfo filepath parentPath permissions fileCount size
     Just doc@Document{} -> do
       let filepath = pathToString $ filePath doc
-      let parentPath = show $ pathToString <$> fileParent doc
+      let parentPath = show $ pathToString $ fileParent doc
       let permissions = filePermissions doc
       let extension = extensionFromPath $ filePath doc
       let creationTime = documentCreationTime doc

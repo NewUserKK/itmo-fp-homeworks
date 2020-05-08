@@ -22,7 +22,7 @@ import Control.Monad.State
 import Data.Aeson
 import Data.Algorithm.Diff (Diff, PolyDiff(..), getGroupedDiff)
 import qualified Data.ByteString.Lazy.Char8 as BS
-import Data.Maybe (catMaybes, fromJust, mapMaybe)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import File
@@ -30,6 +30,7 @@ import Filesystem
 import GHC.Generics
 import Path
 import Utils
+import Data.List.NonEmpty (NonEmpty(..))
 
 data CommitInfo =
   CommitInfo
@@ -143,19 +144,22 @@ getRevisionDirOrError path = do
     Nothing -> throwM FileNotAddedToCVS
 
 getCVSForFile :: Path -> FileSystem (Maybe File)
-getCVSForFile path = do
-  file <- getFileByPath path
-  dir <- case file of
-    Just Document{ fileParent = parent } -> getDirectoryByPathOrError (fromJust parent)
-    Just d@Directory{} -> return d
-    Nothing -> throwM NoSuchFile
+getCVSForFile _ = do
+--  file <- getFileByPath path
+--  dir <- case file of
+--    Just Document{ fileParent = parent } -> getDirectoryByPathOrError (fromJust parent)
+--    Just d@Directory{} -> return d
+--    Nothing -> throwM NoSuchFile
+  dir <- gets currentDirectory
   case findInFolder dir cvsFileName of
     Just cvs@Directory{} -> return $ Just cvs
     Just Document{} -> throwM InvalidCVSRepository
     Nothing ->
       case (fileParent dir) of
-        Just parent -> getCVSForFile parent
-        Nothing -> return Nothing
+        "/" :| [] -> return Nothing
+        parent -> do
+          liftIO $ print parent
+          getCVSForFile parent
 
 getCVSForFileOrError :: Path -> FileSystem File
 getCVSForFileOrError path = do
@@ -234,7 +238,7 @@ mergeRevisions revision1 revision2 strategy = do
   _ <- createFile newPath newFile{ documentContent = newContent } True
   let fsFile = newFile {
       filePath = path
-    , fileParent = Just $ getParentPath path
+    , fileParent = getParentPath path
     , documentContent = newContent
   }
   _ <- createFile path fsFile True

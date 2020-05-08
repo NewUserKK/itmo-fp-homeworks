@@ -154,13 +154,13 @@ updateParentsOfDirectoryContent dir@Document{} = dir
 updateParents :: Path -> File -> File
 updateParents parentPath file@Document{}  =
   file
-    { fileParent = Just parentPath
+    { fileParent = parentPath
     , filePath = parentPath <:| (nameByPath . filePath $ file)
     }
 updateParents parentPath file@Directory{ directoryContents = contents } = do
   let newPath = parentPath <:| (nameByPath . filePath $ file)
   file
-    { fileParent = Just parentPath
+    { fileParent = parentPath
     , filePath = newPath
     , directoryContents = Prelude.map (updateParents newPath) contents
     }
@@ -172,7 +172,7 @@ createFileRecursively ("/" :| next) root@Directory{} newFile overwrite =
 createFileRecursively (name :| []) root@Directory{ directoryContents = contents } newFile overwrite = do
   let fileWithUpdatedPaths = newFile {
       filePath = (filePath root) <:| name
-    , fileParent = Just $ filePath root
+    , fileParent = filePath root
     }
   let newRoot = root { directoryContents = contents ++ [fileWithUpdatedPaths] }
   case findInFolder root name of
@@ -189,7 +189,7 @@ createFileRecursively path@(name :| next) root@Directory{} newFile overwrite =
     Nothing -> do
       let newDirectory = emptyDirectory {
           filePath = (filePath root) <:| name
-        , fileParent = Just $ filePath root
+        , fileParent = filePath root
         }
       updatedRoot <- addToDirectory root newDirectory
       createFileRecursively path updatedRoot newFile overwrite

@@ -14,13 +14,13 @@ data File
   = Directory
       { filePath :: Path
       , filePermissions :: Permissions
-      , fileParent :: Maybe Path
+      , fileParent :: Path
       , directoryContents :: [File]
       }
   | Document
       { filePath :: Path
       , filePermissions :: Permissions
-      , fileParent :: Maybe Path
+      , fileParent :: Path
       , documentCreationTime :: UTCTime
       , documentUpdateTime :: UTCTime
       , documentSize :: Int64
@@ -53,14 +53,14 @@ emptyDirectory = Directory
   { filePath = emptyPath
   , filePermissions = defaultPermissions
   , directoryContents = []
-  , fileParent = Nothing
+  , fileParent = stringToPath "/"
   }
 
 emptyDocument :: UTCTime -> File
 emptyDocument creationTime = Document
   { filePath = emptyPath
   , filePermissions = defaultPermissions
-  , fileParent = Nothing
+  , fileParent = stringToPath "/"
   , documentCreationTime = creationTime
   , documentUpdateTime = creationTime
   , documentSize = 0
