@@ -7,7 +7,7 @@ import Control.Monad.Catch
 import Control.Monad.State
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE hiding (sort)
-import Filesystem (FileSystem, FSState(..), CommandExecutionError, toAbsoluteFSPath, getFileByPathOrError)
+import FilesystemCore (FileSystem, FSState(..), CommandExecutionError, toAbsoluteFSPath, getFileByPathOrError)
 import FilesystemCommands
 import CVSCommands
 import FilesystemLoader
@@ -18,7 +18,7 @@ import Utils
 import Path
 import File
 import Data.List
-import CVS (CommitInfo, MergeStrategy(..), commitRealFilePath)
+import CVSCore (CommitInfo, MergeStrategy(..), commitRealFilePath)
 
 data Arguments =
   Arguments
@@ -53,10 +53,10 @@ data UnknownCommandError
   | UnknownMergeStrategy String
   deriving (Show)
 
-{-| 
+{-|
   The main entry point for the program.
   Takes path to root directory from where to launch file manager as required argument.
--} 
+-}
 main :: IO ()
 main = do
   launch =<< execParser opts
@@ -67,10 +67,10 @@ main = do
         <> header "Command-line file manager with version control system"
         )
 
-{-| 
+{-|
   Load filesystem in memory, execute user commands and dump resulting filesystem to the
-  real PC filesystem. 
--} 
+  real PC filesystem.
+-}
 launch :: Arguments -> IO ()
 launch Arguments{ workingDirectory = root } = do
   initialState <- loadFilesystem root
@@ -78,9 +78,9 @@ launch Arguments{ workingDirectory = root } = do
   dumpFilesystem resultState
 
 
-{-| 
+{-|
   Endless loop waiting for user to prompt and executing given commands
--} 
+-}
 prompt :: FileSystem ()
 prompt = do
   currentDir <- gets currentDirectory
@@ -249,7 +249,7 @@ getRevisionsMessageForDocument :: [CommitInfo] -> String
 getRevisionsMessageForDocument [] = "No history"
 getRevisionsMessageForDocument revisions = do
   let path = pathToString $ commitRealFilePath (Prelude.head revisions)
-  "Commit history for file" ++ path ++ "\n" ++ 
+  "Commit history for file" ++ path ++ "\n" ++
     intercalate "\n" (Prelude.map show $ sort revisions)
 
 printCommandExecutionError :: CommandExecutionError -> FileSystem ()

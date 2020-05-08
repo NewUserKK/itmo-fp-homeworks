@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import File
-import Filesystem
+import FilesystemCore
 import GHC.Int (Int64)
 import Path
 import System.Directory (Permissions)
@@ -40,13 +40,13 @@ makeFile stringPath text = do
   void $ createFile path file False
 
 removeFile :: StringPath -> FileSystem ()
-removeFile = Filesystem.removeFile . stringToPath
+removeFile = FilesystemCore.removeFile . stringToPath
 
 copyFile :: StringPath -> StringPath -> FileSystem ()
 copyFile path targetPath = do
   file <- getFileByPath $ stringToPath path
   case file of
-    Just f -> Filesystem.copyFile f (stringToPath targetPath)
+    Just f -> FilesystemCore.copyFile f (stringToPath targetPath)
     Nothing -> throwM NoSuchFile
 
 appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
@@ -110,5 +110,5 @@ getFileSize doc@Document{} = BS.length $ documentContent doc
 
 findByName :: StringPath -> String -> FileSystem [String]
 findByName rootPath name = do
-  files <- Filesystem.findByName (stringToPath rootPath) name
+  files <- FilesystemCore.findByName (stringToPath rootPath) name
   return $ Prelude.map (pathToString . filePath) files

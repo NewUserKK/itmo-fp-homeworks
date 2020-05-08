@@ -21,11 +21,11 @@ library
   exposed-modules:     Path
                      , File
                      , Utils
-                     , Filesystem
+                     , FilesystemCore
                      , FilesystemLoader
                      , FilesystemDumper
                      , FilesystemCommands
-                     , CVS
+                     , CVSCore
                      , CVSCommands
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
@@ -55,7 +55,7 @@ executable hw2
 test-suite hw2-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  other-modules:       FileSystemSpec, TestUtils, CVSSpec
+  other-modules:       FilesystemCoreSpec, TestUtils, CVSCoreSpec
   main-is:             Spec.hs
   build-depends:       base
                      , hw2

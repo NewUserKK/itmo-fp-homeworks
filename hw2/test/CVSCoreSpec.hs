@@ -1,12 +1,12 @@
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}  -- too annoying, sorry
 {-# LANGUAGE OverloadedStrings #-}
 
-module CVSSpec where
+module CVSCoreSpec where
 
 import qualified Data.ByteString.Lazy as BS
 import Test.Hspec
-import CVS
-import Filesystem
+import CVSCore
+import FilesystemCore
 import TestUtils
 import Data.Maybe (fromJust)
 import File (documentContent)

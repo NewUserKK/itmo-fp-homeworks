@@ -4,7 +4,7 @@ import Control.Monad.State
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Data.List.NonEmpty as NE
 import File
-import Filesystem (FSState(..))
+import FilesystemCore (FSState(..))
 import Path
 import System.Directory
 

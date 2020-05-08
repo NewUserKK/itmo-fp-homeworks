@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -fno-warn-type-defaults #-}  -- too annoying, sorry
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
-module FileSystemSpec where
+module FilesystemCoreSpec where
 
 import Control.Applicative ((<|>))
 import Data.List (sort)
 import Data.Maybe (fromJust)
 import File
-import Filesystem
+import FilesystemCore
 import Test.Hspec
 import TestUtils
 

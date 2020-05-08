@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Filesystem
+module FilesystemCore
   ( CommandExecutionError(..)
   , FSState(..) 
   , FileSystem

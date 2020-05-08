@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
 
-module CVS
+module CVSCore
   ( CommitInfo(..)
   , MergeStrategy(..)
   , cvsInit
@@ -26,7 +26,7 @@ import Data.Maybe (catMaybes, mapMaybe)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
 import File
-import Filesystem
+import FilesystemCore
 import GHC.Generics
 import Path
 import Utils
@@ -45,7 +45,7 @@ instance ToJSON CommitInfo
 
 instance Show CommitInfo where
   show info = (show $ commitIndex info) ++ ". " ++ (commitMessage info)
-  
+
 instance Ord CommitInfo where
   (<=) a b = commitIndex a <= commitIndex b
 

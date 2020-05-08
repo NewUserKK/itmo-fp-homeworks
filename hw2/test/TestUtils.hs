@@ -5,7 +5,7 @@ module TestUtils where
 import Data.Time (UTCTime(..), Day(..), secondsToDiffTime)
 import Control.Monad.State
 import File
-import Filesystem
+import FilesystemCore
 import Path
 import Test.Hspec
 

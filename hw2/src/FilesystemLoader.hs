@@ -10,7 +10,7 @@ import Control.Monad.Trans.Maybe
 import qualified Data.ByteString.Lazy as BS
 import Data.Maybe (catMaybes, fromJust)
 import File
-import Filesystem
+import FilesystemCore
 import Path
 import System.Directory
 

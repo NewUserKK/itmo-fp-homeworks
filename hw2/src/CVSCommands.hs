@@ -2,24 +2,24 @@ module CVSCommands where
 
 import Control.Monad (void)
 import Control.Monad.Catch (throwM)
-import CVS
+import CVSCore
 import qualified Data.ByteString.Lazy as BS
 import File
-import Filesystem
+import FilesystemCore
 import Path
 
 cvsInit :: StringPath -> FileSystem File
-cvsInit = CVS.cvsInit . stringToPath
+cvsInit = CVSCore.cvsInit . stringToPath
 
 cvsAdd :: StringPath -> FileSystem ()
-cvsAdd = void . CVS.cvsAdd . stringToPath
+cvsAdd = void . CVSCore.cvsAdd . stringToPath
 
 cvsUpdate :: StringPath -> String -> FileSystem ()
-cvsUpdate path comment = void $ CVS.cvsUpdate (stringToPath path) comment
+cvsUpdate path comment = void $ CVSCore.cvsUpdate (stringToPath path) comment
 
 cvsHistoryForDocument :: File -> FileSystem [CommitInfo]
 cvsHistoryForDocument doc@Document{} =
-  getAllRevisionsOfDocument doc >>= traverse getCommitInfo 
+  getAllRevisionsOfDocument doc >>= traverse getCommitInfo
 cvsHistoryForDocument Directory{} = throwM DocumentExpected
 
 cvsHistoryForDirectory :: File -> FileSystem [[CommitInfo]]
