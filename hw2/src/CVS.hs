@@ -14,6 +14,7 @@ import File
 import Filesystem
 import GHC.Generics
 import Path
+import Utils
 
 data CommitInfo =
   CommitInfo

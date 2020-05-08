@@ -23,6 +23,7 @@ library
                      , Utils
                      , Filesystem
                      , FilesystemLoader
+                     , FilesystemDumper
                      , FilesystemCommands
                      , CVS
                      , CVSCommands
