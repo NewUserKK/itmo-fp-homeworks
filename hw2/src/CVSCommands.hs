@@ -19,7 +19,7 @@ cvsUpdate path comment = void $ CVS.cvsUpdate (stringToPath path) comment
 
 cvsHistoryForDocument :: File -> FileSystem [CommitInfo]
 cvsHistoryForDocument doc@Document{} =
-  traverse getCommitInfo =<< getAllRevisionsOfDocument doc
+  getAllRevisionsOfDocument doc >>= traverse getCommitInfo 
 cvsHistoryForDocument Directory{} = throwM DocumentExpected
 
 cvsHistoryForDirectory :: File -> FileSystem [[CommitInfo]]

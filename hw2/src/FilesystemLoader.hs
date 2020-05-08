@@ -9,11 +9,10 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe
 import qualified Data.ByteString.Lazy as BS
 import Data.Maybe (catMaybes, fromJust)
-import Filesystem
 import File
+import Filesystem
 import Path
 import System.Directory
-
 
 loadFilesystem :: String -> IO FSState
 loadFilesystem rootPath = do
@@ -26,7 +25,6 @@ loadFilesystem rootPath = do
     , realRootPath = fsRoot
     }
 
-
 getFolderContents :: FilePath -> FilePath -> FilePath -> IO [File]
 getFolderContents realFsRoot realPath localPath = do
   withCurrentDirectory realPath $ do
@@ -34,15 +32,13 @@ getFolderContents realFsRoot realPath localPath = do
     paths <- listDirectory currentDir
     catMaybes <$> traverse (runMaybeT . fileFromPath realFsRoot localPath) paths
 
-
 fileFromPath :: FilePath -> FilePath -> FilePath -> MaybeT IO (File)
 fileFromPath realFsRoot parentPath path =
   (constructDocument parentPath path) <|> (constructDirectory realFsRoot parentPath path)
 
-
 constructDirectory :: FilePath -> FilePath -> FilePath -> MaybeT IO (File)
 constructDirectory realFsRoot localParentPath name = do
-  let localPath = 
+  let localPath =
         case localParentPath of
           "" -> "/"
           "/" -> "/" ++ name
@@ -63,11 +59,10 @@ constructDirectory realFsRoot localParentPath name = do
     , fileParent = stringToPath "/"
     }
 
-
 constructDocument :: FilePath -> FilePath -> MaybeT IO (File)
 constructDocument parentPath path = do
-  let realPath = 
-        if parentPath == "/" 
+  let realPath =
+        if parentPath == "/"
           then "/" ++ path
           else parentPath </> path
   isFile <- liftIO $ doesFileExist path

@@ -45,6 +45,9 @@ instance ToJSON CommitInfo
 
 instance Show CommitInfo where
   show info = (show $ commitIndex info) ++ ". " ++ (commitMessage info)
+  
+instance Ord CommitInfo where
+  (<=) a b = commitIndex a <= commitIndex b
 
 data MergeStrategy
   = MergeLeft
