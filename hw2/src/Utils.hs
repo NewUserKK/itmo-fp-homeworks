@@ -16,9 +16,9 @@ splitOn splitElement list =
   where
     splitResult :: Maybe (NonEmpty [a])
     splitResult = nonEmpty $ (buffer : splitted)
-    
+
     (splitted, buffer) = foldr foldFunc ([], []) list
-    
+
     foldFunc :: a -> ([[a]], [a]) -> ([[a]], [a])
     foldFunc x acc
       | x == splitElement = ((snd acc : fst acc), [])

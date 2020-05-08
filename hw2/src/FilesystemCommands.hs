@@ -1,30 +1,27 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase, OverloadedStrings #-}
 
 module FilesystemCommands where
 
+import Control.Monad.Catch (throwM)
 import Control.Monad.State
-import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy as BS
-import Filesystem
-import Path
-import File
-import Control.Exception (throw)
-import GHC.Int (Int64)
-import System.Directory (Permissions)
 import Data.Time (UTCTime)
 import Data.Time.Clock.System (getSystemTime, systemToUTCTime)
-import Control.Monad.Catch (throwM)
+import File
+import Filesystem
+import GHC.Int (Int64)
+import Path
+import System.Directory (Permissions)
 
 changeDirectory :: StringPath -> FileSystem ()
 changeDirectory path = do
   st <- get
-  newDirectory <- liftIO $ evalStateT (getDirectoryByPath $ stringToPath path) st
+  newDirectory <- liftIO $ evalStateT (getDirectoryByPathOrError $ stringToPath path) st
   modify (\s -> s { currentDirectory = newDirectory })
 
 getContents :: StringPath -> FileSystem [File]
 getContents path = do
-  dir <- getDirectoryByPath $ stringToPath path
+  dir <- getDirectoryByPathOrError $ stringToPath path
   return $ directoryContents dir
 
 makeDirectory :: StringPath -> FileSystem ()
@@ -54,7 +51,7 @@ copyFile path targetPath = do
 
 appendToFile :: StringPath -> BS.ByteString -> FileSystem ()
 appendToFile path text = do
-  file <- getDocumentByPath $ stringToPath path
+  file <- getDocumentByPathOrError $ stringToPath path
   modificationTime <- liftIO $ systemToUTCTime <$> getSystemTime
   let newFile = file {
     documentUpdateTime = modificationTime,
@@ -64,7 +61,7 @@ appendToFile path text = do
 
 readFileContents :: StringPath -> FileSystem BS.ByteString
 readFileContents path = do
-  file <- getDocumentByPath $ stringToPath path
+  file <- getDocumentByPathOrError $ stringToPath path
   return $ documentContent file
 
 getFileInfo :: StringPath -> FileSystem String
@@ -111,8 +108,7 @@ getFileSize :: File -> Int64
 getFileSize dir@Directory{} = foldr ((+) . getFileSize) 0 (directoryContents dir)
 getFileSize doc@Document{} = BS.length $ documentContent doc
 
-
 findByName :: StringPath -> String -> FileSystem [String]
 findByName rootPath name = do
-  root <- getDirectoryByPath (stringToPath rootPath)
-  return $ Prelude.map (pathToString . filePath) (findInPathByName root name)
+  files <- Filesystem.findByName (stringToPath rootPath) name
+  return $ Prelude.map (pathToString . filePath) files

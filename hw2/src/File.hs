@@ -4,7 +4,6 @@
 module File where
 
 import Data.List
-import Data.List.NonEmpty as NE
 import qualified Data.ByteString.Lazy as BS
 import Data.Time (UTCTime)
 import Path
@@ -29,10 +28,13 @@ data File
       }
 
 instance Eq File where
-  (==) a b = filePath a == filePath b
+  (==) a b = filePath a == filePath b && fileParent a == fileParent b
 
 instance Show File where
   show = pathToString . filePath
+  
+instance Ord File where
+  (<=) a b = (pathToString $ filePath a) <= (pathToString $ filePath b)
 
 filterDirectories :: [File] -> [File]
 filterDirectories = Prelude.filter (\case Directory{} -> True; _ -> False)

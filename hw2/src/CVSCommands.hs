@@ -1,16 +1,16 @@
 module CVSCommands where
 
-import Filesystem
-import CVS
-import Path
-import File
-import qualified Data.ByteString.Lazy as BS
-import Control.Monad.Catch (throwM)
 import Control.Monad (void)
+import Control.Monad.Catch (throwM)
+import CVS
+import qualified Data.ByteString.Lazy as BS
+import File
+import Filesystem
+import Path
 
 cvsInit :: StringPath -> FileSystem File
 cvsInit = CVS.cvsInit . stringToPath
-    
+
 cvsAdd :: StringPath -> FileSystem ()
 cvsAdd = void . CVS.cvsAdd . stringToPath
 
@@ -32,7 +32,7 @@ cvsShow :: StringPath -> Int -> FileSystem BS.ByteString
 cvsShow stringPath index = do
   let path = stringToPath stringPath
   revision <- getCVSRevisionOrError path index
-  file <- getFileFromRevisionDir revision
+  file <- getFileFromRevision revision
   return $ documentContent file
 
 cvsRemove :: StringPath -> FileSystem ()
