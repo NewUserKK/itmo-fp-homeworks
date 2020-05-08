@@ -4,7 +4,6 @@
 module FileSystemSpec where
 
 import Control.Applicative ((<|>))
-import Control.Monad.Catch (catch)
 import Data.List (sort)
 import Data.Maybe (fromJust)
 import File
@@ -61,7 +60,7 @@ spec = do
     it "creates file relatively to given parent path" $ do
       let expected = Just newFile {
           filePath = toPath "/dir1/new.txt"
-        , fileParent = Just $ toPath "/dir1"
+        , fileParent = toPath "/dir1"
         }
       let actual = do
             _ <- createFileByName (toPath "/dir1") "new.txt" newFile False
@@ -71,7 +70,7 @@ spec = do
     it "creates file by given path" $ do
       let expected = Just newFile {
           filePath = toPath "/dir1/new.txt"
-        , fileParent = Just $ toPath "/dir1"
+        , fileParent = toPath "/dir1"
         }
       let actual = do
             let path = toPath "/dir1/new.txt"
@@ -81,7 +80,7 @@ spec = do
     it "creates file by given path with missing directories" $ do
       let expected = Just newFile {
           filePath = toPath "/dir2/new.txt"
-        , fileParent = Just $ toPath "/dir2"
+        , fileParent = toPath "/dir2"
         }
       let actual = do
             let path = toPath "/dir2/new.txt"
@@ -92,18 +91,16 @@ spec = do
       let expected = Just "new content"
       let actual = do
             let path = toPath "/file1.txt"
-            _ <- createFile path newFile{ filePath = path, fileParent = Just path } True
+            _ <- createFile path (newFile { filePath = path, fileParent = path }) True
             file <- getFileByPath path
             return $ documentContent <$> file
       actual `evalShouldBe` expected
     it "fails when there is a file existing in path" $ do
-      let expected = Nothing
       let actual = do
             let path = toPath "/file1.txt/new.txt"
             _ <- createFile path newFile False
             getFileByPath path
-      let handled = actual `catch` (\(_ :: CommandExecutionError) -> return Nothing)
-      handled `evalShouldBe` expected
+      evalShouldThrow actual
   describe "FileSystem.getAllFilesInSubDirectories" $ do
       it "retrieves all files in given directory recursively" $ do
         let expected = [file1, dir1_file1]
@@ -113,7 +110,7 @@ spec = do
       it "copies file to given destination" $ do
         let expected = Just dir1_file1 {
             filePath = toPath "/file2.txt"
-          , fileParent = Just $ toPath "/"
+          , fileParent = toPath "/"
           }
         let actual = do
               copyFile (fromJust expected) (toPath "/")

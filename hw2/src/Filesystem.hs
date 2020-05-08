@@ -33,6 +33,7 @@ data FSState =
     , rootDirectory :: File
     , realRootPath :: StringPath
     }
+  deriving (Show)
 
 data CommandExecutionError
   = DirectoryExpected

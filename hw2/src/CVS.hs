@@ -38,7 +38,7 @@ data CommitInfo =
     , commitRealFilePath :: Path
     , commitMessage :: String
     }
-  deriving (Generic)
+  deriving (Generic, Eq)
 
 instance FromJSON CommitInfo
 instance ToJSON CommitInfo

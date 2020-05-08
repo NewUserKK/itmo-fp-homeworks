@@ -55,7 +55,7 @@ executable hw2
 test-suite hw2-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  other-modules:       FileSystemSpec, TestUtils
+  other-modules:       FileSystemSpec, TestUtils, CVSSpec
   main-is:             Spec.hs
   build-depends:       base
                      , hw2
