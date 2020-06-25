@@ -22,6 +22,8 @@ extra-deps:
 - Diff-0.4.0
 - SHA-1.6.4.4
 - aeson-1.4.7.1
+- criterion-1.5.6.2
+- microlens-0.4.11.2
 
 flags: {}
 
