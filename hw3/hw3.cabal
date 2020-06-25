@@ -23,6 +23,8 @@ library
                      , Task5.Practice
                      , Task5.FilesystemLoader
                      , Task5.Path
+                     , Task6
+                     , Task7
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
                      , microlens
@@ -44,7 +46,10 @@ test-suite hw3-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
-  other-modules:       Task5.PracticeSpec, Task5.FilesystemLoaderSpec
+  other-modules:       Task5.PracticeSpec
+                     , Task5.FilesystemLoaderSpec
+                     , Task6Spec
+                     , Task7Spec
   build-depends:       base
                      , hw3
                      , hspec
