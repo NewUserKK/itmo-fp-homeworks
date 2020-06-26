@@ -16,23 +16,6 @@ import Task5.FS
 import Task6 (cd)
 import Data.Maybe (fromMaybe)
 
---Базовая версия
---
---Реализуйте следующие функции, используя линзы:
---
---    Изменить в директории расширения всех файлов на другое (нерекурсивно).
---    Получить имена всех файлов и директорий рекурсивно.
---    Удалить выбранную поддиректорию, только если она пустая.
---
---Усложнённое задание
---
---    Получить полный путь к файлу с названием файла относительно стартового узла FS.
---
---Интерфейс должен быть следующим:
---
---ghci> myDir ^? move "A" . move "B" . getPath  -- myDir is labeled by 'root'
---Just "root/A/B/"
-
 changeExtensions :: String -> FS -> FS
 changeExtensions newExtension =
   _Dir.contents.traversed._File.name %~ (modifyExtension newExtension)
