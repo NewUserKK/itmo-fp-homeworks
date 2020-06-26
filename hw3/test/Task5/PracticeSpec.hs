@@ -3,37 +3,7 @@ module Task5.PracticeSpec where
 import Test.Hspec
 import Task5.Practice
 import Task5.FS
-
-root :: FS
-root =
-  Dir
-    { _name = "/"
-    , _contents =
-      [ dir1
-      , dir2
-      , file1
-    ]
-  }
-
-dir1 :: FS
-dir1 =
-  Dir
-    { _name = "dir1"
-    , _contents = []
-    }
-
-dir2 :: FS
-dir2 =
-  Dir
-    { _name = "dir2"
-    , _contents = []
-    }
-
-file1 :: FS
-file1 =
-  File
-    { _name = "file1"
-    }
+import FSMock
 
 spec :: Spec
 spec = do
@@ -66,7 +36,7 @@ spec = do
     it "should return name of the first dir" $ do
       firstDirName root `shouldBe` (Just $ _name dir1)
     it "should return Nothing if dir is empty" $ do
-      firstDirName dir1 `shouldBe` Nothing
+      firstDirName dir2 `shouldBe` Nothing
     it "should return Nothing if it is file" $ do
       firstDirName file1 `shouldBe` Nothing
   describe "Task5.fileNames" $ do
