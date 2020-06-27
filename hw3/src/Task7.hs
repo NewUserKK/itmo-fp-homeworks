@@ -21,8 +21,8 @@ changeExtensions newExtension =
   _Dir.contents.traversed._File.name %~ (modifyExtension newExtension)
 
 move :: String -> Traversal' FS FS
-move dirName f dir@(Dir{}) = 
-  ((dir ^? cd dirName) <&> (f . changeName)) `orElse` pure dir 
+move dirName f dir@(Dir{}) =
+  ((dir ^? cd dirName) <&> (f . changeName)) `orElse` pure dir
   where
     changeName :: FS -> FS
     changeName = name %~ ((dir^.name ++ "/") ++)

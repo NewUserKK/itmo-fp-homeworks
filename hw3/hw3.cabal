@@ -25,22 +25,40 @@ library
                      , Task5.Path
                      , Task6
                      , Task7
+                     , Task8.ListZipper
+                     , Task8.Cell
+                     , Task8.Grid
+                     , Task8.Simulation
+                     , Task8.Constants
   ghc-options:         -Wall
   build-depends:       base >= 4.9 && < 5
                      , microlens
+                     , microlens-platform
                      , mtl
                      , directory
                      , transformers
                      , split
+                     , comonad
+                     , random
+                     , ansi-terminal
+                     , o-clock
   default-language:    Haskell2010
 
-executable hw3
+executable hw3-task1
   hs-source-dirs:      app
-  main-is:             Main.hs
+  main-is:             Task1App.hs
   ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
                      , hw3
                      , criterion
+  default-language:    Haskell2010
+
+executable hw3-task8
+  hs-source-dirs:      app
+  main-is:             Task8App.hs
+  ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , hw3
   default-language:    Haskell2010
 
 test-suite hw3-test
@@ -51,10 +69,12 @@ test-suite hw3-test
                      , Task5.FilesystemLoaderSpec
                      , Task6Spec
                      , Task7Spec
+                     , Task8Spec
                      , FSMock
   build-depends:       base
                      , hw3
                      , hspec
                      , microlens
+                     , mtl
   ghc-options:         -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
